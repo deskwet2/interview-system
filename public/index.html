@@ -37,17 +37,9 @@
             <h2>Available Vacancies</h2>
             <p>Select a role and enter details to begin</p>
             
-            <div class="vacancy-card" onclick="selectRole(this, 'banking')">
-                <strong>🏦 Customer Account Manager</strong><br>
-                <small>Banking Operations</small>
-            </div>
-            <div class="vacancy-card" onclick="selectRole(this, 'data')">
-                <strong>📊 Data Analyst</strong><br>
-                <small>Financial Reporting</small>
-            </div>
-            <div class="vacancy-card" onclick="selectRole(this, 'general')">
-                <strong>🏢 Administrative Officer</strong><br>
-                <small>Office Management</small>
+            <!-- Dynamic Vacancy List (Updated from DB) -->
+            <div id="vacancy-list">
+                <p>Loading available positions...</p>
             </div>
 
             <input type="text" id="name-input" placeholder="Enter Full Name">
@@ -62,11 +54,14 @@
     const socket = io();
     let candidateName = "";
     let candidateEmail = "";
-    let selectedCategory = "";
+    let selectedCategory = ""; // This stores the Category ID from DB
     let currentScreenFile = "";
 
     // Persistence Restore using Email (The Identity Hub)
-    window.onload = () => {
+    window.onload = async () => {
+        // First, pull real-time categories from the database
+        await loadVacancies();
+
         const savedEmail = localStorage.getItem('cand_email');
         const savedName = localStorage.getItem('cand_name');
         const savedCat = localStorage.getItem('cand_cat');
@@ -81,10 +76,33 @@
         }
     }
 
-    function selectRole(element, category) {
+    // New: Fetch categories from your /api/vacancies endpoint
+    async function loadVacancies() {
+        try {
+            const response = await fetch('/api/vacancies');
+            const categories = await response.json();
+            const list = document.getElementById('vacancy-list');
+            list.innerHTML = ""; 
+
+            categories.forEach(cat => {
+                const card = document.createElement('div');
+                card.className = "vacancy-card";
+                card.onclick = () => selectRole(card, cat.id); 
+                card.innerHTML = `
+                    <strong>${cat.name}</strong><br>
+                    <small>Official Vacancy</small>
+                `;
+                list.appendChild(card);
+            });
+        } catch (err) {
+            document.getElementById('vacancy-list').innerHTML = `<p style="color:red;">Error loading vacancies.</p>`;
+        }
+    }
+
+    function selectRole(element, categoryId) {
         document.querySelectorAll('.vacancy-card').forEach(el => el.classList.remove('selected'));
         element.classList.add('selected');
-        selectedCategory = category;
+        selectedCategory = categoryId; // This is now the Integer ID
     }
 
     function startInterview(isRestore = false) {
@@ -104,7 +122,7 @@
         socket.emit('join_interview', { 
             name: candidateName, 
             email: candidateEmail, 
-            category: selectedCategory 
+            categoryId: selectedCategory // Sending categoryId to match server logic
         });
         
         document.getElementById('screen-target').innerHTML = `<div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;"><h3>Connecting to Interview Server...</h3></div>`;
@@ -135,11 +153,17 @@
             const form = document.querySelector('form');
             if(form) {
                 form.onsubmit = (e) => { e.preventDefault(); validateAndSubmit(); };
+                // Using the specific 'typing' event for the Examiner's indicator
                 form.oninput = () => socket.emit('typing', { email: candidateEmail });
             }
         } catch (err) {
             document.getElementById('screen-target').innerHTML = `<p style="color:red; padding:20px;">System Error: Failed to load ${data.screenFile}</p>`;
         }
+    });
+
+    // Dedicated Redirection Listener to ensure Point 4 & 7 works flawlessly
+    socket.on('redirect_command', (data) => {
+        if (data.url) window.location.href = data.url;
     });
 
     function validateAndSubmit() {

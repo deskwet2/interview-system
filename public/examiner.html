@@ -61,7 +61,7 @@
 <div id="sidebar">
     <div class="sidebar-header">Interview Management</div>
     <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterList('live')">Live</button>
+        <button class="filter-btn active" onclick="filterList(event, 'live')">Live</button>
         <button class="filter-btn" onclick="filterList('all')">All Records</button>
     </div>
     <div id="candidate-list"></div>
@@ -117,10 +117,10 @@
         socket.emit('request_list_refresh'); 
     });
 
-    function filterList(mode) {
+    function filterList(e, mode) {
         viewMode = mode;
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        event.target.classList.add('active');
+        e.target.classList.add('active'); // Now 'e' is defined
         socket.emit('request_list_refresh');
     }
 
@@ -138,25 +138,24 @@
                 <strong>${can.name}</strong> <span class="cat-tag">${can.category_name || 'User'}</span>
                 <br><small>${can.email}</small>
             `;
-            item.onclick = () => selectCandidate(can);
+            item.onclick = (e) => selectCandidate(e, can);
             list.appendChild(item);
         });
     }
 
-    async function selectCandidate(candidate) {
+    async function selectCandidate(e, candidate) {
         currentTargetEmail = candidate.email;
         currentTargetName = candidate.name;
         
         document.getElementById('selected-name').innerText = candidate.name;
-        document.getElementById('current-category-label').innerText = (candidate.category_name || 'N/A').toUpperCase();
+        document.getElementById('current-category-label').innerText = (candidate.category_name || 'USER').toUpperCase();
         
+        // UI Cleanup
         document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
+        e.currentTarget.classList.add('active');
 
-        // POINT 3: Fetch history from DB via socket
+        // Fetch history and screens
         socket.emit('get_candidate_history', candidate.email);
-        
-        // POINT 2: Fetch category-specific screens
         loadCommandPanel(candidate.category_id);
     }
 
@@ -210,6 +209,15 @@
             `;
             container.appendChild(div);
         });
+    });
+
+
+    socket.on('candidate_typing', (data) => {
+        if(data.email === currentTargetEmail) {
+            const indicator = document.getElementById('typing-indicator');
+            indicator.innerText = `${currentTargetName} is filling a form...`;
+            setTimeout(() => indicator.innerText = "", 3000);
+        }
     });
 
     function toggleEdit(index) {

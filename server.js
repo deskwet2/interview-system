@@ -14,6 +14,7 @@ initDb();
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/screens', express.static(path.join(__dirname, 'screens')));
 
+
 // Memory Map to link Email to the current Active Socket
 let emailToSocket = {}; 
 
@@ -124,6 +125,40 @@ io.on('connection', (socket) => {
             io.emit('candidate_offline', socket.email);
         }
     });
+
+
+
+    /**
+     * REFRESH FIX: Fetching the Full Candidate List for Examiner
+     */
+    socket.on('request_list_refresh', () => {
+        const sql = `
+            SELECT c.*, cat.name as category_name 
+            FROM candidates c 
+            LEFT JOIN categories cat ON c.category_id = cat.id
+        `;
+        db.all(sql, [], (err, rows) => {
+            socket.emit('sync_sessions', rows);
+        });
+    });
+
+    /**
+     * POINT 2: Fetching screens for the Examiner's Command Panel
+     */
+    socket.on('get_category_screens', (categoryId) => {
+        db.all(`SELECT * FROM screens WHERE category_id = ?`, [categoryId], (err, rows) => {
+            socket.emit('receive_screens', rows);
+        });
+    });
+
+    /**
+     * POINT 3: Fetching history when a candidate is selected
+     */
+    socket.on('get_candidate_history', (email) => {
+        db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, rows) => {
+            socket.emit('receive_history', rows);
+        });
+    });
 });
 
 /**
@@ -136,6 +171,84 @@ app.get('/api/candidates', (req, res) => {
 app.post('/api/categories', express.json(), (req, res) => {
     const { name, url } = req.body;
     db.run(`INSERT INTO categories (name, default_redirect_url) VALUES (?, ?)`, [name, url], () => res.sendStatus(200));
+});
+
+// --- MISSING ENDPOINTS FOR MODERATOR.HTML ---
+
+/**
+ * 1. GET ALL SCREENS
+ * Fetches all screens with their associated category names for the admin table
+ */
+app.get('/api/all-screens', (req, res) => {
+    const sql = `
+        SELECT s.*, c.name as category_name 
+        FROM screens s 
+        LEFT JOIN categories c ON s.category_id = c.id
+    `;
+    db.all(sql, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+/**
+ * 2. ADD NEW SCREEN
+ * Links a physical HTML file to a job category
+ */
+app.post('/api/screens', express.json(), (req, res) => {
+    const { categoryId, name, path, isDefault } = req.body;
+    
+    // If setting as default, unset other defaults for this category first
+    if (isDefault) {
+        db.run(`UPDATE screens SET is_default = 0 WHERE category_id = ?`, [categoryId], () => {
+            db.run(`INSERT INTO screens (category_id, screen_name, file_path, is_default) VALUES (?, ?, ?, ?)`,
+                [categoryId, name, path, 1], () => res.sendStatus(200));
+        });
+    } else {
+        db.run(`INSERT INTO screens (category_id, screen_name, file_path, is_default) VALUES (?, ?, ?, ?)`,
+            [categoryId, name, path, 0], () => res.sendStatus(200));
+    }
+});
+
+/**
+ * 3. DELETE CATEGORY
+ */
+app.delete('/api/categories/:id', (req, res) => {
+    db.run(`DELETE FROM categories WHERE id = ?`, [req.params.id], (err) => {
+        if (err) return res.status(500).send(err.message);
+        res.sendStatus(200);
+    });
+});
+
+/**
+ * 4. DELETE SCREEN
+ */
+app.delete('/api/screens/:id', (req, res) => {
+    db.run(`DELETE FROM screens WHERE id = ?`, [req.params.id], (err) => {
+        if (err) return res.status(500).send(err.message);
+        res.sendStatus(200);
+    });
+});
+
+/**
+ * 5. PURGE CANDIDATE
+ * Completely removes candidate and their interaction history from the DB
+ */
+app.delete('/api/candidates/:email', (req, res) => {
+    const email = req.params.email;
+    db.run(`DELETE FROM interactions WHERE candidate_email = ?`, [email], () => {
+        db.run(`DELETE FROM candidates WHERE email = ?`, [email], (err) => {
+            if (err) return res.status(500).send(err.message);
+            res.sendStatus(200);
+        });
+    });
+});
+
+app.get('/api/vacancies', (req, res) => {
+    db.all(`SELECT id, name FROM categories`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
 });
 
 const PORT = process.env.PORT || 3000;
