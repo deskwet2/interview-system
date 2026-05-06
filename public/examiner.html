@@ -36,14 +36,20 @@
     </div>
 </div>
 
+<!-- ... existing style ... -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
     let currentTarget = "";
 
-    // When a candidate joins, the server tells everyone. We add them to the sidebar.
+    // DEFINING SOUNDS (Make sure these files are in /public)
+    const loginSound = new Audio('login.mp3');
+    const submitSound = new Audio('submit.mp3');
+
     socket.on('candidate_online', (data) => {
-        notificationSound.play().catch(e => console.log("Sound blocked until user interacts with page"));
+        // Play login sound
+        loginSound.play().catch(e => console.log("Interaction needed for sound"));
+
         const list = document.getElementById('candidate-list');
         const item = document.createElement('div');
         item.className = 'candidate-item';
@@ -55,7 +61,12 @@
         list.appendChild(item);
     });
 
-    // Handle typing notifications
+    // NEW: Notify when candidate submits
+    socket.on('notify_submission', (data) => {
+        submitSound.play().catch(e => console.log("Interaction needed for sound"));
+        alert(data.name + " has just submitted a task!");
+    });
+
     socket.on('is_typing', (name) => {
         const indicator = document.getElementById('typing-indicator');
         indicator.innerText = name + " is typing...";
@@ -63,11 +74,7 @@
     });
 
     function sendTask(taskName) {
-        if(!currentTarget) {
-            alert("Please select a candidate from the sidebar first!");
-            return;
-        }
-        // Tell the server to send this task to the specific candidate
+        if(!currentTarget) return alert("Select a candidate!");
         socket.emit('trigger_screen', { candidateId: currentTarget, screenData: taskName });
     }
 </script>
