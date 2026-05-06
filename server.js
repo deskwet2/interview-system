@@ -27,6 +27,12 @@ io.on('connection', (socket) => {
         io.emit('is_typing', candidateName);
     });
 
+    socket.on('trigger_screen', (data) => {
+        console.log(`Sending ${data.screenData} to ${data.candidateId}`);
+        // This sends the command ONLY to the room named after the candidate
+        io.to(data.candidateId).emit('new_task', data.screenData);
+    });
+
     socket.on('disconnect', () => {
         console.log('User disconnected');
     });

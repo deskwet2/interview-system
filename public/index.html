@@ -45,6 +45,21 @@
             document.getElementById('welcome-msg').innerText = "Hello, " + candidateName;
         }
     }
+
+
+    // Add this inside the <script> tags in index.html
+    socket.on('new_task', (taskName) => {
+        const statusDiv = document.getElementById('status');
+        const instruction = document.getElementById('instruction');
+
+        if(taskName === 'Processing') {
+            statusDiv.innerHTML = "<strong>Processing... please wait.</strong>";
+            instruction.innerText = "The examiner is reviewing your details.";
+        } else {
+            statusDiv.innerText = "Current Task: " + taskName;
+            instruction.innerText = "Please follow the instructions for " + taskName;
+        }
+    });
 </script>
 </body>
 </html>
