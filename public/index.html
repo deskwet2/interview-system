@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Candidate Portal</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f4f9; }
+        #app { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 300px; text-align: center; }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; }
+        button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
+        .hidden { display: none; }
+        #status { color: #666; font-style: italic; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="login-screen">
+        <h2>Enter Interview</h2>
+        <input type="text" id="name" placeholder="Enter Your Name">
+        <button onclick="login()">Join</button>
+    </div>
+
+    <div id="interview-screen" class="hidden">
+        <h2 id="welcome-msg"></h2>
+        <div id="status">Waiting for examiner...</div>
+        <p id="instruction">Please stay on this page. The examiner will present your questions shortly.</p>
+    </div>
+</div>
+
+<!-- This connects to your live Render server automatically -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+    let candidateName = "";
+
+    function login() {
+        candidateName = document.getElementById('name').value;
+        if(candidateName) {
+            // Tell the server we are here
+            socket.emit('join_interview', candidateName);
+
+            // UI Changes
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('interview-screen').classList.remove('hidden');
+            document.getElementById('welcome-msg').innerText = "Hello, " + candidateName;
+        }
+    }
+</script>
+</body>
+</html>

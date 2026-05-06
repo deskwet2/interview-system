@@ -7,19 +7,32 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// This tells Node to show people the files in the "public" folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// The Real-Time Logic
+// Logic for when someone connects
 io.on('connection', (socket) => {
-    console.log('Someone connected!');
+    console.log('New connection:', socket.id);
+
+    // 1. Candidate Joins a specific "Room" based on their ID
+    socket.on('join_interview', (candidateName) => {
+        socket.join(candidateName); 
+        console.log(`${candidateName} has joined the interview room.`);
+        
+        // Notify the examiner (we'll build the examiner side next)
+        io.emit('candidate_online', { name: candidateName, id: socket.id });
+    });
+
+    // 2. Listen for Candidate Typing
+    socket.on('typing', (candidateName) => {
+        io.emit('is_typing', candidateName);
+    });
 
     socket.on('disconnect', () => {
-        console.log('Someone left.');
+        console.log('User disconnected');
     });
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`System is running on port ${PORT}`);
+    console.log(`Server is live on port ${PORT}`);
 });
