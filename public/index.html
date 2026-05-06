@@ -22,6 +22,13 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
         .file-upload-zone { border: 2px dashed #bbb; padding: 20px; border-radius: 8px; margin: 10px 0; color: #666; }
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
     </style>
 </head>
 <body>
@@ -80,7 +87,6 @@
             return alert("Please enter your name and select a vacancy.");
         }
 
-        // Send both name and category to the examiner
         socket.emit('join_interview', { name: candidateName, category: selectedCategory });
 
         document.getElementById('setup-screen').classList.add('hidden');
@@ -88,11 +94,11 @@
         document.getElementById('welcome-msg').innerText = candidateName;
     }
 
-    // Handle Task Triggers from Examiner
-    socket.on('new_task', (taskName) => {
+    socket.on('new_task', (data) => {
+        const taskName = data.taskName;
         const statusArea = document.getElementById('status-area');
         const container = document.getElementById('task-container');
-        container.innerHTML = ""; // Clear old task
+        container.innerHTML = ""; 
 
         if(taskName === 'Processing') {
             statusArea.innerHTML = `<div class="loader"></div><p><strong>Processing...</strong></p>`;
@@ -101,7 +107,6 @@
 
         statusArea.innerHTML = `<h3>Current Task: ${taskName}</h3>`;
 
-        // Logic to build "Dummy" screens based on task name
         if (taskName.includes("Form") || taskName.includes("Task") || taskName.includes("Bio")) {
             container.innerHTML = `
                 <textarea id="task-ans" placeholder="Type your response here..." rows="4"></textarea>
@@ -127,11 +132,22 @@
             `;
         }
 
-        // Notify examiner candidate is typing when they focus on the input
         const input = document.getElementById('task-ans');
         if(input) {
             input.onfocus = () => socket.emit('typing', candidateName);
         }
+    });
+
+    socket.on('wrong_answer', (data) => {
+        const statusArea = document.getElementById('status-area');
+        const alertDiv = document.createElement('div');
+        alertDiv.style.cssText = "background:#ffebee; color:#c62828; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ef9a9a;";
+        alertDiv.innerHTML = `<strong>⚠️ ${data.message}</strong>`;
+        
+        statusArea.prepend(alertDiv);
+        
+        document.getElementById('app').style.animation = "shake 0.5s";
+        setTimeout(() => document.getElementById('app').style.animation = "", 500);
     });
 
     function submitResponse(task) {
@@ -145,14 +161,12 @@
 
     function submitFile(task) {
         const fileInput = document.getElementById('file-input');
-        const fileName = fileInput.files[0] ? fileInput.files[0].name : "document.pdf";
+        const fileName = (fileInput.files && fileInput.files[0]) ? fileInput.files[0].name : "document.pdf";
         
-        // In a real app, you would upload to a server. 
-        // Here we simulate the URL for the examiner to "download"
         socket.emit('task_submitted', {
             name: candidateName,
             answer: `Uploaded ${fileName} for ${task}`,
-            fileUrl: "#", // Dummy link
+            fileUrl: "#", 
             fileName: fileName
         });
         showWaiting();

@@ -54,7 +54,6 @@
 </div>
 
 <div id="content-wrapper">
-    <!-- Column 1: Commands -->
     <div id="command-section">
         <div class="section-header">Control Panel: <span id="current-category-label" style="color:#0084ff">Select User</span></div>
         <div id="typing-indicator" style="padding: 5px 20px; font-size: 0.8rem; color: #1abc9c; height: 20px;"></div>
@@ -63,7 +62,6 @@
         </div>
     </div>
 
-    <!-- Column 2: Chat Logs -->
     <div id="chat-section">
         <div class="section-header">Interview Transcript: <strong id="selected-name">None</strong></div>
         <div id="chat-window"></div>
@@ -74,13 +72,11 @@
 <script>
     const socket = io();
     let currentTarget = "";
-    let currentCategory = "";
+    let currentTargetId = ""; // Track the actual socket ID for commands
     const loginSound = new Audio('login.mp3');
     const submitSound = new Audio('submit.mp3');
+    loginSound.loop = true;
 
-    // 1. Task Database (Mocking a JSON/DB structure)
-    // isForm: true means it's a data-entry screen
-    // hasUpload: true adds a visual hint to the examiner
     const taskLibrary = {
         general: [
             { id: "Welcome Screen", isForm: false },
@@ -104,25 +100,21 @@
         loginSound.play().then(() => {
             loginSound.pause();
             document.getElementById('audio-lock').style.display = 'none';
-        });
+        }).catch(err => console.log("Audio interaction required"));
     }
 
-    // Auto-update commands based on candidate's chosen category
     function loadCategoryCommands(category) {
         const grid = document.getElementById('command-buttons');
         const label = document.getElementById('current-category-label');
-        grid.innerHTML = "";
+        grid.innerHTML = `<button class="btn-cmd" style="background:#ff4757; color:white;" onclick="markWrong()">❌ Mark Last Answer Wrong</button><hr>`;
         label.innerText = category.toUpperCase();
 
         const tasks = taskLibrary[category] || [];
-        
         tasks.forEach(task => {
             const btn = document.createElement('button');
             btn.className = task.id === "Processing" ? "btn-action" : "btn-cmd";
-            
             let uploadHint = task.hasUpload ? '<span class="upload-icon">📎 Upload</span>' : '';
             btn.innerHTML = `${task.id} ${uploadHint}`;
-            
             btn.onclick = () => sendTask(task.id);
             grid.appendChild(btn);
         });
@@ -134,44 +126,50 @@
         const item = document.createElement('div');
         item.className = 'candidate-item';
         item.id = `user-${data.name}`;
-        // data.category comes from the vacancy choice in candidate portal
         item.innerHTML = `<strong>${data.name}</strong> <span class="cat-tag">${data.category}</span><br><small>Ready to start</small>`;
-        item.onclick = () => selectCandidate(data.name, data.category);
+        // Corrected: Pass data.id to the selection function
+        item.onclick = () => selectCandidate(data.name, data.category, data.id);
         list.appendChild(item);
     });
 
-    function selectCandidate(name, category) {
+    function selectCandidate(name, category, id) {
+        loginSound.pause();
+        loginSound.currentTime = 0;
+
         currentTarget = name;
-        currentCategory = category;
-        document.getElementById('selected-name').innerText = name;
+        currentTargetId = id; // Store ID for socket communication
         
-        // UI Highlighting
+        const displayId = id ? id.substring(0,5) : "N/A";
+        document.getElementById('selected-name').innerHTML = 
+            `Name: ${name} | ID: ${displayId} | Role: <span class="cat-tag">${category}</span>`;
+        
         document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
-        document.getElementById(`user-${name}`).classList.add('active');
+        const activeItem = document.getElementById(`user-${name}`);
+        if(activeItem) activeItem.classList.add('active');
         
-        // Auto-switch commands
         loadCategoryCommands(category);
-        
-        // Clear chat window for focus (In a full app, you'd load history here)
         document.getElementById('chat-window').innerHTML = ""; 
     }
 
+    function markWrong() {
+        if(!currentTargetId) return alert("Select a candidate first.");
+        socket.emit('mark_wrong', { candidateId: currentTargetId });
+        addMessage('examiner', `<span style="color:red">⚠️ Notified ${currentTarget} of wrong answer.</span>`);
+    }
+
     function sendTask(taskName) {
-        if(!currentTarget) return alert("Please select a candidate from the sidebar first.");
-        socket.emit('trigger_screen', { candidateId: currentTarget, screenData: taskName });
+        if(!currentTargetId) return alert("Please select a candidate from the sidebar first.");
+        socket.emit('trigger_screen', { candidateId: currentTargetId, screenData: taskName });
         addMessage('examiner', `Screen Triggered: <strong>${taskName}</strong>`);
     }
 
     socket.on('notify_submission', (data) => {
         if(data.name === currentTarget) {
             submitSound.play();
-            
-            let content = data.answer;
-            // Handle if the submission contains a file
+            let content = data.answer || "Form Submitted";
             if(data.fileUrl) {
                 content = `<strong>Submitted File:</strong> <a href="${data.fileUrl}" class="file-link" download>⬇ Download ${data.fileName || 'Attachment'}</a>`;
             }
-            
             addMessage('candidate', content);
         }
     });
