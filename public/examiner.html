@@ -6,21 +6,27 @@
         body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; overflow: hidden; }
         
         #audio-lock { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(28, 40, 51, 0.98); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; }
-        #sidebar { width: 280px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
+        #sidebar { width: 300px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; background: #1a252f; font-size: 1.1rem; font-weight: bold; border-bottom: 1px solid #34495e; }
+        
+        /* Point 8: Filter Bar */
+        .filter-bar { padding: 10px; background: #1a252f; display: flex; gap: 5px; }
+        .filter-btn { flex: 1; padding: 5px; font-size: 0.75rem; cursor: pointer; border: none; border-radius: 3px; background: #34495e; color: white; }
+        .filter-btn.active { background: #1abc9c; }
+
         #candidate-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
-        .candidate-item { padding: 12px; margin-bottom: 8px; background: #3e5871; border-radius: 6px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; }
-        .candidate-item:hover { background: #1abc9c; }
+        .candidate-item { padding: 12px; margin-bottom: 8px; background: #3e5871; border-radius: 6px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; position: relative; }
+        .candidate-item:hover { background: #4e6a85; }
         .candidate-item.active { background: #1abc9c; border-left: 4px solid #fff; }
+        .candidate-item.offline { opacity: 0.6; border-left-color: #95a5a6; }
         .cat-tag { font-size: 0.7rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
 
         #content-wrapper { flex-grow: 1; display: flex; flex-direction: row; height: 100%; }
 
         /* Column 1: Commands */
-        #command-section { width: 380px; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #fff; }
+        #command-section { width: 400px; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #fff; }
         .section-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Point 2: Individual Command Styles */
         .command-container { margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; background: #fafafa; }
         .command-main { display: flex; padding: 5px; background: #fff; align-items: center; }
         .btn-send-now { flex-grow: 1; padding: 10px; background: #0084ff; color: white; border: none; font-weight: 600; cursor: pointer; text-align: left; }
@@ -31,7 +37,9 @@
         .editor-input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.8rem; }
 
         .command-grid { padding: 15px; overflow-y: auto; flex-grow: 1; }
-        .btn-danger { background: #ff4757; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 10px; }
+        .action-row { display: flex; gap: 10px; margin-bottom: 15px; }
+        .btn-danger { background: #ff4757; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: 600; flex: 1; }
+        .btn-warning { background: #f39c12; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: 600; flex: 1; }
 
         /* Column 2: Transcript */
         #chat-section { flex-grow: 1; display: flex; flex-direction: column; background: #e5ddd5; position: relative; }
@@ -51,7 +59,11 @@
 </div>
 
 <div id="sidebar">
-    <div class="sidebar-header">Live Candidates</div>
+    <div class="sidebar-header">Interview Management</div>
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterList('live')">Live</button>
+        <button class="filter-btn" onclick="filterList('all')">All Records</button>
+    </div>
     <div id="candidate-list"></div>
 </div>
 
@@ -64,7 +76,7 @@
         <div id="typing-indicator" style="padding: 5px 20px; font-size: 0.8rem; color: #1abc9c; height: 20px;"></div>
         
         <div class="command-grid" id="command-buttons">
-            <p style="color: #888; text-align: center; margin-top: 20px;">Select a candidate to load controls.</p>
+            <p style="color: #888; text-align: center; margin-top: 20px;">Select a candidate from the list to begin.</p>
         </div>
     </div>
 
@@ -77,20 +89,15 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
-    let currentTarget = "";
-    let currentTargetId = ""; 
+    let currentTargetEmail = "";
+    let currentTargetName = "";
+    let viewMode = "live"; // live or all
+    
     const loginSound = new Audio('login.mp3');
     const submitSound = new Audio('submit.mp3');
 
-    // POINT 3 & 5: Updated task library with JSON object mapping and Default flags
-    const taskLibrary = [
-        { file: "welcome.html", category: "general", isDefault: true, name: "Welcome Screen" },
-        { file: "bio.html", category: "general", isDefault: false, name: "Personal Bio Form" },
-        { file: "cd_form.html", category: "banking", isDefault: true, name: "Specialty CD Form" },
-        { file: "affidavit.html", category: "banking", isDefault: false, name: "Affidavit Signature" },
-        { file: "analysis.html", category: "data", isDefault: true, name: "Data Analysis Task" },
-        { file: "logic.html", category: "data", isDefault: false, name: "System Logic Test" }
-    ];
+    // These will eventually be fetched from the DB (Phase 2/3)
+    let taskLibrary = []; 
 
     function unlockAudio() {
         loginSound.play().then(() => {
@@ -99,57 +106,100 @@
         });
     }
 
-    // POINT 6: Restore state on refresh
+    // POINT 6: Load existing sessions from Database
     socket.on('sync_sessions', (candidates) => {
-        document.getElementById('candidate-list').innerHTML = "";
-        for (let id in candidates) {
-            addCandidateToUI(candidates[id]);
-            // If the examiner was viewing this person before, reload their transcript
-            if (candidates[id].id === currentTargetId) {
-                reloadTranscript(candidates[id].transcript);
-            }
-        }
+        refreshCandidateList(candidates);
     });
 
     socket.on('candidate_online', (data) => {
         loginSound.play();
-        addCandidateToUI(data);
+        // Refresh full list to ensure status updates
+        socket.emit('request_list_refresh'); 
     });
 
-    function addCandidateToUI(data) {
-        if(document.getElementById(`user-${data.id}`)) return;
+    function filterList(mode) {
+        viewMode = mode;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        socket.emit('request_list_refresh');
+    }
+
+    function refreshCandidateList(candidates) {
         const list = document.getElementById('candidate-list');
-        const item = document.createElement('div');
-        item.className = 'candidate-item';
-        item.id = `user-${data.id}`;
-        item.innerHTML = `<strong>${data.name}</strong> <span class="cat-tag">${data.category}</span>`;
-        item.onclick = () => selectCandidate(data.name, data.category, data.id);
-        list.appendChild(item);
+        list.innerHTML = "";
+        
+        candidates.forEach(can => {
+            if (viewMode === 'live' && can.status !== 'live') return;
+
+            const item = document.createElement('div');
+            item.className = `candidate-item ${can.status !== 'live' ? 'offline' : ''}`;
+            item.id = `user-${can.email.replace(/[@.]/g, '_')}`;
+            item.innerHTML = `
+                <strong>${can.name}</strong> <span class="cat-tag">${can.category_name || 'User'}</span>
+                <br><small>${can.email}</small>
+            `;
+            item.onclick = () => selectCandidate(can);
+            list.appendChild(item);
+        });
     }
 
-    function selectCandidate(name, category, id) {
-        currentTarget = name;
-        currentTargetId = id;
-        document.getElementById('selected-name').innerText = name;
-        document.getElementById('current-category-label').innerText = category.toUpperCase();
+    async function selectCandidate(candidate) {
+        currentTargetEmail = candidate.email;
+        currentTargetName = candidate.name;
+        
+        document.getElementById('selected-name').innerText = candidate.name;
+        document.getElementById('current-category-label').innerText = (candidate.category_name || 'N/A').toUpperCase();
+        
         document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
-        const activeItem = document.getElementById(`user-${id}`);
-        if(activeItem) activeItem.classList.add('active');
-        loadCategoryCommands(category);
+        event.currentTarget.classList.add('active');
+
+        // POINT 3: Fetch history from DB via socket
+        socket.emit('get_candidate_history', candidate.email);
+        
+        // POINT 2: Fetch category-specific screens
+        loadCommandPanel(candidate.category_id);
     }
 
-    function loadCategoryCommands(category) {
+    function loadCommandPanel(categoryId) {
         const grid = document.getElementById('command-buttons');
-        grid.innerHTML = `<button class="btn-danger" onclick="markWrong()">❌ Mark Last Answer Wrong</button><hr>`;
-
-        const filteredTasks = taskLibrary.filter(t => t.category === category);
-        filteredTasks.forEach((task, index) => {
-            const container = document.createElement('div');
-            container.className = "command-container";
-            container.innerHTML = `
+        grid.innerHTML = `
+            <div class="action-row">
+                <button class="btn-warning" onclick="resetSession()">🔄 Reset Session</button>
+                <button class="btn-danger" onclick="markWrong()">❌ Mark Wrong</button>
+            </div>
+            <div class="action-row">
+                <button class="btn-danger" style="background:#c0392b" onclick="removeCandidate()">🚫 Remove Candidate</button>
+            </div>
+            <hr>
+            <h4>Category Screens</h4>
+            <div id="category-screens-list"></div>
+            <hr>
+            <h4>Redirection (Point 4)</h4>
+            <div class="command-container">
                 <div class="command-main">
-                    <button class="btn-send-now" onclick="sendTask('${task.file}', ${index})">
-                        ${task.isDefault ? '⭐ ' : ''}Send: ${task.name}
+                    <button class="btn-send-now" style="background:#8e44ad" onclick="sendRedirect()">🚀 Execute Redirect</button>
+                    <button class="btn-edit-toggle" onclick="toggleEdit('redir')">⚙️</button>
+                </div>
+                <div id="edit-redir" class="edit-dropdown">
+                    <input type="text" id="custom-url" class="editor-input" placeholder="Custom URL (Leave blank for default)">
+                </div>
+            </div>
+        `;
+
+        // Request screens for this category from server
+        socket.emit('get_category_screens', categoryId);
+    }
+
+    socket.on('receive_screens', (screens) => {
+        const container = document.getElementById('category-screens-list');
+        container.innerHTML = "";
+        screens.forEach((task, index) => {
+            const div = document.createElement('div');
+            div.className = "command-container";
+            div.innerHTML = `
+                <div class="command-main">
+                    <button class="btn-send-now" onclick="sendTask('${task.file_path}', ${index})">
+                        ${task.is_default ? '⭐ ' : ''}Send: ${task.screen_name}
                     </button>
                     <button class="btn-edit-toggle" onclick="toggleEdit(${index})">⚙️ Edit</button>
                 </div>
@@ -158,49 +208,75 @@
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
                 </div>
             `;
-            grid.appendChild(container);
+            container.appendChild(div);
         });
-    }
+    });
 
     function toggleEdit(index) {
-        const drop = document.getElementById(`edit-${index}`);
-        drop.classList.toggle('open');
+        document.getElementById(`edit-${index}`).classList.toggle('open');
+    }
+
+    // POINT 5: Reset Logic
+    function resetSession() {
+        if(!currentTargetEmail) return;
+        if(confirm("Start candidate from the beginning? This clears transcript.")) {
+            socket.emit('reset_candidate', currentTargetEmail);
+            document.getElementById('chat-window').innerHTML = "";
+            addMessage('examiner', `<span style="color:orange">Session Reset Initiated</span>`);
+        }
+    }
+
+    // POINT 7: Remove Logic
+    function removeCandidate() {
+        if(!currentTargetEmail) return;
+        if(confirm("Forcibly remove this candidate from live list?")) {
+            socket.emit('remove_candidate', currentTargetEmail);
+        }
     }
 
     function markWrong() {
-        if(!currentTargetId) return alert("Select a candidate.");
-        socket.emit('mark_wrong', { candidateId: currentTargetId, message: "Validation Failed: Form Reset." });
-        addMessage('examiner', `<span style="color:red">⚠️ Error targeted to "error-div" for ${currentTarget}</span>`);
+        socket.emit('mark_wrong', { candidateEmail: currentTargetEmail, message: "Information mismatch. Please re-enter." });
+        addMessage('examiner', `<span style="color:red">⚠️ Error Warning Sent</span>`);
     }
 
-    function sendTask(screenFile, index) {
-        if(!currentTargetId) return alert("Select a candidate.");
-        const customH = document.getElementById(`h-${index}`).value;
-        const customS = document.getElementById(`s-${index}`).value;
-
+    // POINT 4: Redirect Command
+    function sendRedirect() {
+        const url = document.getElementById('custom-url').value;
         socket.emit('trigger_screen', { 
-            candidateId: currentTargetId, 
-            screenFile: screenFile,
-            header: customH,
-            subHeader: customS
+            candidateEmail: currentTargetEmail, 
+            isRedirect: true,
+            customUrl: url 
         });
-        addMessage('examiner', `Switched screen to: <strong>${screenFile}</strong>`);
+        addMessage('examiner', `Redirect Command Sent: ${url || 'Default Link'}`);
     }
 
-    socket.on('notify_submission', (data) => {
-        if(data.name === currentTarget) {
-            submitSound.play();
-            addMessage('candidate', `<strong>[Submission: ${data.screenFile}]</strong><br>${data.answer}`);
-        }
-    });
+    function sendTask(file, index) {
+        const h = document.getElementById(`h-${index}`).value;
+        const s = document.getElementById(`s-${index}`).value;
+        socket.emit('trigger_screen', { 
+            candidateEmail: currentTargetEmail, 
+            screenFile: file,
+            header: h,
+            subHeader: s 
+        });
+        addMessage('examiner', `Screen Pushed: <strong>${file}</strong>`);
+    }
 
-    function reloadTranscript(transcript) {
+    socket.on('receive_history', (history) => {
         const win = document.getElementById('chat-window');
         win.innerHTML = "";
-        transcript.forEach(entry => {
-            addMessage('candidate', `<strong>[${entry.task}]</strong><br>${entry.answer}`);
+        history.forEach(h => {
+            const sender = h.type === 'command' ? 'examiner' : 'candidate';
+            addMessage(sender, `<strong>[${h.screen_file}]</strong><br>${h.content}`);
         });
-    }
+    });
+
+    socket.on('notify_submission', (data) => {
+        if(data.email === currentTargetEmail) {
+            submitSound.play();
+            addMessage('candidate', `<strong>[${data.screenFile}]</strong><br>${data.answer}`);
+        }
+    });
 
     function addMessage(sender, text) {
         const win = document.getElementById('chat-window');
@@ -210,13 +286,6 @@
         win.appendChild(div);
         win.scrollTop = win.scrollHeight;
     }
-
-    socket.on('is_typing', (name) => {
-        if(name === currentTarget) {
-            document.getElementById('typing-indicator').innerText = name + " is interacting with form...";
-            setTimeout(() => { document.getElementById('typing-indicator').innerText = ""; }, 2000);
-        }
-    });
 </script>
 </body>
 </html>

