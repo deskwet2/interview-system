@@ -5,7 +5,6 @@
     <style>
         body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; overflow: hidden; }
         
-        /* Sidebar & Header Styles */
         #audio-lock { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(28, 40, 51, 0.98); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; }
         #sidebar { width: 280px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; background: #1a252f; font-size: 1.1rem; font-weight: bold; border-bottom: 1px solid #34495e; }
@@ -19,18 +18,20 @@
 
         /* Column 1: Commands */
         #command-section { width: 380px; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #fff; }
-        .section-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; font-weight: bold; }
+        .section-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         
-        /* Custom Header Editor */
-        #header-editor { padding: 15px; background: #fff9e6; border-bottom: 1px solid #ffeaa7; }
-        .editor-input { width: 100%; padding: 8px; margin-bottom: 5px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 0.85rem; }
+        /* Point 2: Individual Command Styles */
+        .command-container { margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; overflow: hidden; background: #fafafa; }
+        .command-main { display: flex; padding: 5px; background: #fff; align-items: center; }
+        .btn-send-now { flex-grow: 1; padding: 10px; background: #0084ff; color: white; border: none; font-weight: 600; cursor: pointer; text-align: left; }
+        .btn-edit-toggle { padding: 10px; background: #ebedf0; border: none; cursor: pointer; border-left: 1px solid #ddd; }
+        
+        .edit-dropdown { padding: 10px; background: #f0f2f5; border-top: 1px solid #ddd; display: none; }
+        .edit-dropdown.open { display: block; }
+        .editor-input { width: 100%; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 0.8rem; }
 
         .command-grid { padding: 15px; overflow-y: auto; flex-grow: 1; }
-        button { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; text-align: left; transition: 0.2s; position: relative; }
-        .btn-cmd { background: #f0f2f5; color: #1c1e21; border: 1px solid #ccd0d5; }
-        .btn-cmd:hover { background: #e4e6eb; }
-        .btn-action { background: #0084ff; color: white; }
-        .btn-danger { background: #ff4757; color: white; margin-bottom: 20px; }
+        .btn-danger { background: #ff4757; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-weight: 600; width: 100%; margin-bottom: 10px; }
 
         /* Column 2: Transcript */
         #chat-section { flex-grow: 1; display: flex; flex-direction: column; background: #e5ddd5; position: relative; }
@@ -46,7 +47,7 @@
 <div id="audio-lock">
     <h2>Bank Interview System</h2>
     <p>Please click to activate control panel sounds and tools.</p>
-    <button onclick="unlockAudio()" class="btn-action" style="width:auto; padding: 15px 40px;">Activate Dashboard</button>
+    <button onclick="unlockAudio()" style="padding: 15px 40px; background:#0084ff; color:white; border:none; border-radius:5px; cursor:pointer;">Activate Dashboard</button>
 </div>
 
 <div id="sidebar">
@@ -56,16 +57,10 @@
 
 <div id="content-wrapper">
     <div id="command-section">
-        <div class="section-header">Control Panel: <span id="current-category-label" style="color:#0084ff">Select User</span></div>
-        
-        <!-- Header Customizer (Point 4) -->
-        <div id="header-editor">
-            <small><strong>Screen Instruction Customizer:</strong></small>
-            <input type="text" id="cust-header" class="editor-input" placeholder="Main Header (e.g., Final Step)">
-            <input type="text" id="cust-subtext" class="editor-input" placeholder="Sub-text instruction...">
-            <button onclick="resetHeaders()" style="padding:4px; font-size:0.7rem; width:auto; background:none; border:1px solid #ccc; color:#666;">Reset to Default</button>
+        <div class="section-header">
+            Control Panel: <span id="current-category-label" style="color:#0084ff">Select User</span>
         </div>
-
+        
         <div id="typing-indicator" style="padding: 5px 20px; font-size: 0.8rem; color: #1abc9c; height: 20px;"></div>
         
         <div class="command-grid" id="command-buttons">
@@ -87,23 +82,15 @@
     const loginSound = new Audio('login.mp3');
     const submitSound = new Audio('submit.mp3');
 
-    // Refactored Library matching Screen IDs (Point 5)
-    const taskLibrary = {
-        general: [
-            { name: "Welcome Screen", screenId: "WELCOME_01" },
-            { name: "Personal Bio Form", screenId: "BIO_FORM_FULL" },
-            { name: "Upload CV", screenId: "DOC_UPLOAD_ZONE" }
-        ],
-        banking: [
-            { name: "Specialty CD Form", screenId: "CD_ACCOUNT_DETAIL" },
-            { name: "Affidavit Signature", screenId: "AFFIDAVIT_LEGAL_01" },
-            { name: "Account Opening", screenId: "KYC_COMPLEX_FORM" }
-        ],
-        data: [
-            { name: "Data Analysis Task", screenId: "FIN_ANALYSIS_GRID" },
-            { name: "System Logic Test", screenId: "LOGIC_EVAL_SCREEN" }
-        ]
-    };
+    // POINT 3 & 5: Updated task library with JSON object mapping and Default flags
+    const taskLibrary = [
+        { file: "welcome.html", category: "general", isDefault: true, name: "Welcome Screen" },
+        { file: "bio.html", category: "general", isDefault: false, name: "Personal Bio Form" },
+        { file: "cd_form.html", category: "banking", isDefault: true, name: "Specialty CD Form" },
+        { file: "affidavit.html", category: "banking", isDefault: false, name: "Affidavit Signature" },
+        { file: "analysis.html", category: "data", isDefault: true, name: "Data Analysis Task" },
+        { file: "logic.html", category: "data", isDefault: false, name: "System Logic Test" }
+    ];
 
     function unlockAudio() {
         loginSound.play().then(() => {
@@ -112,78 +99,108 @@
         });
     }
 
-    function resetHeaders() {
-        document.getElementById('cust-header').value = "";
-        document.getElementById('cust-subtext').value = "";
-    }
-
-    function loadCategoryCommands(category) {
-        const grid = document.getElementById('command-buttons');
-        const label = document.getElementById('current-category-label');
-        label.innerText = category.toUpperCase();
-        grid.innerHTML = `<button class="btn-danger" onclick="markWrong()">❌ Mark Last Answer Wrong</button><hr>`;
-
-        const tasks = taskLibrary[category] || [];
-        tasks.forEach(task => {
-            const btn = document.createElement('button');
-            btn.className = "btn-cmd";
-            btn.innerHTML = `Send: ${task.name}`;
-            btn.onclick = () => sendTask(task.name);
-            grid.appendChild(btn);
-        });
-    }
+    // POINT 6: Restore state on refresh
+    socket.on('sync_sessions', (candidates) => {
+        document.getElementById('candidate-list').innerHTML = "";
+        for (let id in candidates) {
+            addCandidateToUI(candidates[id]);
+            // If the examiner was viewing this person before, reload their transcript
+            if (candidates[id].id === currentTargetId) {
+                reloadTranscript(candidates[id].transcript);
+            }
+        }
+    });
 
     socket.on('candidate_online', (data) => {
         loginSound.play();
+        addCandidateToUI(data);
+    });
+
+    function addCandidateToUI(data) {
+        if(document.getElementById(`user-${data.id}`)) return;
         const list = document.getElementById('candidate-list');
         const item = document.createElement('div');
         item.className = 'candidate-item';
-        item.id = `user-${data.name}`;
+        item.id = `user-${data.id}`;
         item.innerHTML = `<strong>${data.name}</strong> <span class="cat-tag">${data.category}</span>`;
         item.onclick = () => selectCandidate(data.name, data.category, data.id);
         list.appendChild(item);
-    });
+    }
 
     function selectCandidate(name, category, id) {
         currentTarget = name;
         currentTargetId = id;
         document.getElementById('selected-name').innerText = name;
+        document.getElementById('current-category-label').innerText = category.toUpperCase();
         document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
-        const activeItem = document.getElementById(`user-${name}`);
+        const activeItem = document.getElementById(`user-${id}`);
         if(activeItem) activeItem.classList.add('active');
         loadCategoryCommands(category);
     }
 
-    // Point 2: Trigger reset and notification on candidate side
-    function markWrong() {
-        if(!currentTargetId) return alert("Select a candidate.");
-        socket.emit('mark_wrong', { candidateId: currentTargetId });
-        addMessage('examiner', `<span style="color:red">⚠️ Error Notification Sent to ${currentTarget}</span>`);
+    function loadCategoryCommands(category) {
+        const grid = document.getElementById('command-buttons');
+        grid.innerHTML = `<button class="btn-danger" onclick="markWrong()">❌ Mark Last Answer Wrong</button><hr>`;
+
+        const filteredTasks = taskLibrary.filter(t => t.category === category);
+        filteredTasks.forEach((task, index) => {
+            const container = document.createElement('div');
+            container.className = "command-container";
+            container.innerHTML = `
+                <div class="command-main">
+                    <button class="btn-send-now" onclick="sendTask('${task.file}', ${index})">
+                        ${task.isDefault ? '⭐ ' : ''}Send: ${task.name}
+                    </button>
+                    <button class="btn-edit-toggle" onclick="toggleEdit(${index})">⚙️ Edit</button>
+                </div>
+                <div id="edit-${index}" class="edit-dropdown">
+                    <input type="text" id="h-${index}" class="editor-input" placeholder="Custom Header">
+                    <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
+                </div>
+            `;
+            grid.appendChild(container);
+        });
     }
 
-    // Point 3 & 4: Sending full screen triggers with custom text
-    function sendTask(screenName) {
+    function toggleEdit(index) {
+        const drop = document.getElementById(`edit-${index}`);
+        drop.classList.toggle('open');
+    }
+
+    function markWrong() {
         if(!currentTargetId) return alert("Select a candidate.");
-        
-        const customH = document.getElementById('cust-header').value;
-        const customS = document.getElementById('cust-subtext').value;
+        socket.emit('mark_wrong', { candidateId: currentTargetId, message: "Validation Failed: Form Reset." });
+        addMessage('examiner', `<span style="color:red">⚠️ Error targeted to "error-div" for ${currentTarget}</span>`);
+    }
+
+    function sendTask(screenFile, index) {
+        if(!currentTargetId) return alert("Select a candidate.");
+        const customH = document.getElementById(`h-${index}`).value;
+        const customS = document.getElementById(`s-${index}`).value;
 
         socket.emit('trigger_screen', { 
             candidateId: currentTargetId, 
-            screenName: screenName,
-            customHeader: customH,
-            customSubHeader: customS
+            screenFile: screenFile,
+            header: customH,
+            subHeader: customS
         });
-        
-        addMessage('examiner', `Switched screen to: <strong>${screenName}</strong>`);
+        addMessage('examiner', `Switched screen to: <strong>${screenFile}</strong>`);
     }
 
     socket.on('notify_submission', (data) => {
         if(data.name === currentTarget) {
             submitSound.play();
-            addMessage('candidate', `<strong>[${data.screenId || 'Submission'}]</strong><br>${data.answer}`);
+            addMessage('candidate', `<strong>[Submission: ${data.screenFile}]</strong><br>${data.answer}`);
         }
     });
+
+    function reloadTranscript(transcript) {
+        const win = document.getElementById('chat-window');
+        win.innerHTML = "";
+        transcript.forEach(entry => {
+            addMessage('candidate', `<strong>[${entry.task}]</strong><br>${entry.answer}`);
+        });
+    }
 
     function addMessage(sender, text) {
         const win = document.getElementById('chat-window');
