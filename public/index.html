@@ -9,6 +9,20 @@
         button { width: 100%; padding: 10px; background: #007bff; color: white; border: none; cursor: pointer; }
         .hidden { display: none; }
         #status { color: #666; font-style: italic; margin-top: 10px; }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
@@ -53,11 +67,14 @@
         const instruction = document.getElementById('instruction');
 
         if(taskName === 'Processing') {
-            statusDiv.innerHTML = "<strong>Processing... please wait.</strong>";
-            instruction.innerText = "The examiner is reviewing your details.";
+            statusDiv.innerHTML = `
+                <div class="loader"></div>
+                <p><strong>Securely processing your request...</strong></p>
+            `;
+            instruction.innerText = "Please do not refresh the page.";
         } else {
-            statusDiv.innerText = "Current Task: " + taskName;
-            instruction.innerText = "Please follow the instructions for " + taskName;
+            statusDiv.innerHTML = "<h3>" + taskName + "</h3>";
+            instruction.innerText = "Follow the instructions for the " + taskName;
         }
     });
 </script>

@@ -7,29 +7,44 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// --- ROUTES ---
+
+// 1. Home Route (Candidate Portal)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 2. Examiner Route (Clean URL: /examiner)
+app.get('/examiner', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'examiner.html'));
+});
+
+// 3. Serve Static Files (CSS, JS, Images, Sounds)
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Logic for when someone connects
+
+// --- REAL-TIME LOGIC ---
 io.on('connection', (socket) => {
     console.log('New connection:', socket.id);
 
-    // 1. Candidate Joins a specific "Room" based on their ID
+    // Candidate joins a specific room
     socket.on('join_interview', (candidateName) => {
         socket.join(candidateName); 
         console.log(`${candidateName} has joined the interview room.`);
         
-        // Notify the examiner (we'll build the examiner side next)
+        // Notify the examiner
         io.emit('candidate_online', { name: candidateName, id: socket.id });
     });
 
-    // 2. Listen for Candidate Typing
+    // Handle typing notifications
     socket.on('typing', (candidateName) => {
         io.emit('is_typing', candidateName);
     });
 
+    // Examiner directs the candidate
     socket.on('trigger_screen', (data) => {
         console.log(`Sending ${data.screenData} to ${data.candidateId}`);
-        // This sends the command ONLY to the room named after the candidate
+        // Send command ONLY to the specific candidate's room
         io.to(data.candidateId).emit('new_task', data.screenData);
     });
 

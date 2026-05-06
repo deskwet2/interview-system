@@ -43,6 +43,7 @@
 
     // When a candidate joins, the server tells everyone. We add them to the sidebar.
     socket.on('candidate_online', (data) => {
+        notificationSound.play().catch(e => console.log("Sound blocked until user interacts with page"));
         const list = document.getElementById('candidate-list');
         const item = document.createElement('div');
         item.className = 'candidate-item';
