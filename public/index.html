@@ -1,33 +1,33 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Candidate Portal</title>
+    <title>Candidate Portal - Official</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f2f5; }
-        #app { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f2f5; }
+        #app { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 450px; text-align: center; }
         
         .vacancy-card { border: 2px solid #eee; border-radius: 8px; padding: 15px; margin: 10px 0; cursor: pointer; transition: 0.3s; text-align: left; }
         .vacancy-card:hover { border-color: #007bff; background: #f8fbff; }
         .vacancy-card.selected { border-color: #007bff; background: #e7f3ff; }
         
-        input[type="text"], textarea { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
-        button:disabled { background: #ccc; }
+        input, textarea, select { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
+        label { display: block; text-align: left; font-size: 0.85rem; font-weight: bold; color: #555; margin-top: 10px; }
+        
+        button { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 15px; transition: 0.2s; }
+        button:disabled { background: #80bdff; cursor: not-allowed; }
         
         .hidden { display: none; }
-        #status-area { margin-top: 20px; min-height: 100px; }
+        #status-area { margin-bottom: 20px; border-bottom: 2px solid #f0f2f5; padding-bottom: 15px; }
         
-        /* Loading Spinner */
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+        /* Processing Spinner */
+        .loader-inline { display: inline-block; border: 3px solid #f3f3f3; border-top: 3px solid #ffffff; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; margin-right: 8px; vertical-align: middle; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .file-upload-zone { border: 2px dashed #bbb; padding: 20px; border-radius: 8px; margin: 10px 0; color: #666; }
         @keyframes shake {
-            0% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-8px); }
+            50% { transform: translateX(8px); }
+            75% { transform: translateX(-8px); }
         }
     </style>
 </head>
@@ -43,27 +43,24 @@
             <strong>🏦 Customer Account Manager</strong><br>
             <small>Banking Operations & Customer Relations</small>
         </div>
-
         <div class="vacancy-card" onclick="selectRole(this, 'data')">
             <strong>📊 Data Analyst</strong><br>
             <small>Financial Reporting & System Logic</small>
         </div>
-
         <div class="vacancy-card" onclick="selectRole(this, 'general')">
             <strong>🏢 Administrative Officer</strong><br>
             <small>General Office Management</small>
         </div>
 
-        <input type="text" id="name-input" placeholder="Enter Full Name" style="margin-top: 20px;">
+        <input type="text" id="name-input" placeholder="Enter Full Name">
         <button id="join-btn" onclick="startInterview()">Enter Interview Room</button>
     </div>
 
     <!-- Step 2: Live Interview Room -->
     <div id="interview-screen" class="hidden">
-        <h3 id="welcome-msg"></h3>
-        <hr>
         <div id="status-area">
-            <p id="instruction">Waiting for the examiner to initialize the first task...</p>
+            <h2 id="main-header">Connecting...</h2>
+            <p id="sub-header" style="color: #666; font-size: 0.9rem;"></p>
         </div>
         <div id="task-container"></div>
     </div>
@@ -74,6 +71,7 @@
     const socket = io();
     let candidateName = "";
     let selectedCategory = "";
+    let currentScreenId = "";
 
     function selectRole(element, category) {
         document.querySelectorAll('.vacancy-card').forEach(el => el.classList.remove('selected'));
@@ -83,99 +81,111 @@
 
     function startInterview() {
         candidateName = document.getElementById('name-input').value;
-        if(!candidateName || !selectedCategory) {
-            return alert("Please enter your name and select a vacancy.");
-        }
-
+        if(!candidateName || !selectedCategory) return alert("Select a role and enter your name.");
         socket.emit('join_interview', { name: candidateName, category: selectedCategory });
-
         document.getElementById('setup-screen').classList.add('hidden');
         document.getElementById('interview-screen').classList.remove('hidden');
-        document.getElementById('welcome-msg').innerText = candidateName;
     }
 
     socket.on('new_task', (data) => {
-        const taskName = data.taskName;
-        const statusArea = document.getElementById('status-area');
+        currentScreenId = data.screenId;
+        renderScreen(data);
+    });
+
+    function renderScreen(data) {
+        document.getElementById('main-header').innerText = data.header || data.taskName;
+        document.getElementById('sub-header').innerText = data.subHeader || "";
+        
         const container = document.getElementById('task-container');
         container.innerHTML = ""; 
 
-        if(taskName === 'Processing') {
-            statusArea.innerHTML = `<div class="loader"></div><p><strong>Processing...</strong></p>`;
-            return;
+        const form = document.createElement('form');
+        form.id = "active-form";
+        
+        // Point 3 & 5: Unique screens based on ScreenId
+        switch(data.screenId) {
+            case "BIO_FORM_FULL":
+                form.innerHTML = `
+                    <label>Full Name</label><input type="text" name="fullName" required>
+                    <label>Years of Experience</label><input type="text" name="exp" required>
+                    <label>Professional Bio</label><textarea name="bio" rows="3"></textarea>
+                `;
+                break;
+            case "CD_ACCOUNT_DETAIL":
+                form.innerHTML = `
+                    <label>Deposit Amount</label><input type="text" placeholder="Minimum 25,000" name="deposit">
+                    <label>Duration (Months)</label><select name="months"><option>6 Months</option><option>12 Months</option></select>
+                `;
+                break;
+            case "DOC_UPLOAD_ZONE":
+                form.innerHTML = `
+                    <div style="border:2px dashed #ccc; padding:20px; border-radius:8px;">
+                        <input type="file" name="doc" id="file-input">
+                        <p style="font-size:0.8rem; color:#888;">Select official PDF or Image</p>
+                    </div>
+                `;
+                break;
+            case "WELCOME_01":
+                form.innerHTML = `<p>Welcome, ${candidateName}. The interview will begin shortly.</p>`;
+                break;
+            default:
+                form.innerHTML = `<textarea id="generic-ans" placeholder="Your response..." rows="4"></textarea>`;
         }
 
-        statusArea.innerHTML = `<h3>Current Task: ${taskName}</h3>`;
+        const submitBtn = document.createElement('button');
+        submitBtn.id = "submit-btn";
+        submitBtn.type = "button";
+        submitBtn.innerText = "Submit Information";
+        submitBtn.onclick = () => submitWork(data.screenId);
+        
+        if(data.screenId !== "WELCOME_01") form.appendChild(submitBtn);
+        container.appendChild(form);
 
-        if (taskName.includes("Form") || taskName.includes("Task") || taskName.includes("Bio")) {
-            container.innerHTML = `
-                <textarea id="task-ans" placeholder="Type your response here..." rows="4"></textarea>
-                <button onclick="submitResponse('${taskName}')">Submit Work</button>
-            `;
-        } 
-        else if (taskName.includes("Upload") || taskName.includes("Affidavit")) {
-            container.innerHTML = `
-                <div class="file-upload-zone">
-                    <p>Click to select or drag file here</p>
-                    <input type="file" id="file-input">
-                </div>
-                <button onclick="submitFile('${taskName}')">Upload & Submit</button>
-            `;
-        }
-        else if (taskName === "Welcome Screen") {
-            container.innerHTML = `<p>Welcome to the official portal. Please wait for further instructions.</p>`;
-        }
-        else {
-            container.innerHTML = `
-                <p>Please perform the action required for: <strong>${taskName}</strong></p>
-                <button onclick="submitResponse('${taskName}')">Acknowledge / Complete</button>
-            `;
-        }
+        // Notify typing
+        form.oninput = () => socket.emit('typing', { name: candidateName });
+    }
 
-        const input = document.getElementById('task-ans');
-        if(input) {
-            input.onfocus = () => socket.emit('typing', candidateName);
-        }
-    });
+    // Point 1: Handle "Processing" state without changing screen
+    function submitWork(screenId) {
+        const btn = document.getElementById('submit-btn');
+        const form = document.getElementById('active-form');
+        const inputs = form.querySelectorAll('input, textarea, select');
+        
+        btn.disabled = true;
+        btn.innerHTML = `<div class="loader-inline"></div> Processing...`;
+        inputs.forEach(i => i.disabled = true);
 
+        // Gather all form data
+        const formData = new FormData(form);
+        let dataString = "";
+        formData.forEach((value, key) => { dataString += `${key}: ${value} | `; });
+
+        socket.emit('task_submitted', {
+            name: candidateName,
+            screenId: screenId,
+            answer: dataString || "Task Acknowledged"
+        });
+    }
+
+    // Point 2: Wrong Answer resets form and triggers shake
     socket.on('wrong_answer', (data) => {
-        const statusArea = document.getElementById('status-area');
-        const alertDiv = document.createElement('div');
-        alertDiv.style.cssText = "background:#ffebee; color:#c62828; padding:10px; border-radius:5px; margin-bottom:10px; border:1px solid #ef9a9a;";
-        alertDiv.innerHTML = `<strong>⚠️ ${data.message}</strong>`;
-        
-        statusArea.prepend(alertDiv);
-        
-        document.getElementById('app').style.animation = "shake 0.5s";
-        setTimeout(() => document.getElementById('app').style.animation = "", 500);
+        const btn = document.getElementById('submit-btn');
+        const form = document.getElementById('active-form');
+        const inputs = form.querySelectorAll('input, textarea, select');
+
+        if(form) form.reset();
+        if(btn) {
+            btn.disabled = false;
+            btn.innerText = "Resubmit Information";
+        }
+        inputs.forEach(i => i.disabled = false);
+
+        const app = document.getElementById('app');
+        app.style.animation = "shake 0.4s ease-in-out";
+        setTimeout(() => app.style.animation = "", 400);
+
+        alert(data.message);
     });
-
-    function submitResponse(task) {
-        const val = document.getElementById('task-ans') ? document.getElementById('task-ans').value : "Task Completed";
-        socket.emit('task_submitted', {
-            name: candidateName,
-            answer: `[${task}] Response: ${val}`
-        });
-        showWaiting();
-    }
-
-    function submitFile(task) {
-        const fileInput = document.getElementById('file-input');
-        const fileName = (fileInput.files && fileInput.files[0]) ? fileInput.files[0].name : "document.pdf";
-        
-        socket.emit('task_submitted', {
-            name: candidateName,
-            answer: `Uploaded ${fileName} for ${task}`,
-            fileUrl: "#", 
-            fileName: fileName
-        });
-        showWaiting();
-    }
-
-    function showWaiting() {
-        document.getElementById('task-container').innerHTML = "";
-        document.getElementById('status-area').innerHTML = "<p>Task submitted. Waiting for next instruction...</p>";
-    }
 </script>
 </body>
 </html>

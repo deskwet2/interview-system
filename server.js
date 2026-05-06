@@ -7,72 +7,87 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Static file hosting
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Mock JSON database for screens
+/**
+ * SCREEN DATABASE REFACTOR
+ * 5. Each screen is built differently. We use 'screenId' to map to 
+ * specific HTML/Components on the frontend.
+ */
 const screenDatabase = [
-    { name: "Welcome Screen", category: "general", type: "info", isDefault: true },
-    { name: "Personal Bio Form", category: "general", type: "form" },
-    { name: "Upload CV", category: "general", type: "file" },
-    { name: "Specialty CD Form", category: "banking", type: "form", isDefault: true },
-    { name: "Affidavit Signature", category: "banking", type: "file" },
-    { name: "Account Opening", category: "banking", type: "form" },
-    { name: "Data Analysis Task", category: "data", type: "form", isDefault: true },
-    { name: "System Logic Test", category: "data", type: "form" },
-    { name: "Upload Report", category: "data", type: "file" }
+    // General Category
+    { name: "Welcome Screen", screenId: "WELCOME_01", category: "general", isDefault: true },
+    { name: "Personal Bio Form", screenId: "BIO_FORM_FULL", category: "general" },
+    { name: "Document Upload", screenId: "DOC_UPLOAD_ZONE", category: "general" },
+    
+    // Banking Category
+    { name: "Specialty CD Form", screenId: "CD_ACCOUNT_DETAIL", category: "banking", isDefault: true },
+    { name: "Affidavit Signature", screenId: "AFFIDAVIT_LEGAL_01", category: "banking" },
+    { name: "KYC Verification", screenId: "KYC_COMPLEX_FORM", category: "banking" },
+    
+    // Data Category
+    { name: "Data Analysis Task", screenId: "FIN_ANALYSIS_GRID", category: "data", isDefault: true },
+    { name: "System Logic Test", screenId: "LOGIC_EVAL_SCREEN", category: "data" }
 ];
 
 io.on('connection', (socket) => {
-    
-    // Handle candidate joining
+
     socket.on('join_interview', (data) => {
         const { name, category } = data;
-        
-        // We use the candidate's name as a room name for targeted communication
         socket.join(name); 
         
-        // 1. Find default screen for this category
         const defaultScreen = screenDatabase.find(s => s.category === category && s.isDefault);
         
-        // 2. Notify examiner with full details (including the unique socket.id)
         io.emit('candidate_online', { name, category, id: socket.id });
 
-        // 3. Auto-trigger default screen for candidate immediately
         if (defaultScreen) {
             socket.emit('new_task', { 
                 taskName: defaultScreen.name, 
-                type: defaultScreen.type 
+                screenId: defaultScreen.screenId,
+                header: "Official Documentation", // Default Header
+                subHeader: "Please fill out the required fields below." // Default Sub-header
             });
         }
     });
 
-    // Examiner manually triggers a specific screen
+    /**
+     * 4. CUSTOMIZABLE HEADERS
+     * Examiner can now send custom header/subHeader text along with the task.
+     */
     socket.on('trigger_screen', (data) => {
-        // data.candidateId is the socket ID; data.screenData is the task name
-        const screenInfo = screenDatabase.find(s => s.name === data.screenData);
+        // data contains: candidateId, screenName, customHeader, customSubHeader
+        const screenInfo = screenDatabase.find(s => s.name === data.screenName);
         
-        io.to(data.candidateId).emit('new_task', { 
-            taskName: data.screenData,
-            type: screenInfo ? screenInfo.type : 'info' 
-        });
+        if (screenInfo) {
+            io.to(data.candidateId).emit('new_task', { 
+                taskName: screenInfo.name,
+                screenId: screenInfo.screenId,
+                header: data.customHeader || "Verification Required",
+                subHeader: data.customSubHeader || "Please provide accurate information."
+            });
+        }
     });
 
-    // Notify candidate of wrong answer (triggers shake effect and alert)
+    /**
+     * 2. WRONG ANSWER REFACTOR
+     * When 'mark_wrong' is triggered:
+     * 1. The screen DOES NOT change.
+     * 2. The candidate frontend will catch this to reset the form and show alert.
+     */
     socket.on('mark_wrong', (data) => {
         io.to(data.candidateId).emit('wrong_answer', { 
-            message: "Your last submission was incorrect. Please review and try again." 
+            message: "Information mismatch detected. The form has been reset for security. Please re-enter details." 
         });
     });
 
-    // Forward candidate submissions to the examiner
     socket.on('task_submitted', (data) => {
+        // 1. Screen stays the same on candidate side (handled in UI)
+        // 1. Button shows "Processing" (handled in UI)
         io.emit('notify_submission', data); 
     });
 
-    // Real-time typing/interaction status
-    socket.on('typing', (name) => {
-        io.emit('is_typing', name);
+    socket.on('typing', (data) => {
+        io.emit('is_typing', data.name);
     });
 
     socket.on('disconnect', () => {
@@ -82,6 +97,5 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`--- Bank Interview System Live ---`);
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Bank Server Refactored & Live on ${PORT}`);
 });
