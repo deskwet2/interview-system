@@ -1,82 +1,197 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Examiner Control Center</title>
+    <title>Examiner Command Center</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; height: 100vh; margin: 0; background: #eef2f7; }
-        #sidebar { width: 250px; background: #2c3e50; color: white; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
-        #main { flex-grow: 1; padding: 40px; }
-        .candidate-item { padding: 10px; margin: 5px 0; background: #34495e; border-radius: 4px; cursor: pointer; transition: 0.3s; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; margin: 0; background: #f0f2f5; overflow: hidden; }
+        
+        /* Sound Overlay */
+        #audio-lock { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(28, 40, 51, 0.98); z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction:column; color:white; text-align:center; }
+        
+        /* Sidebar */
+        #sidebar { width: 280px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
+        .sidebar-header { padding: 20px; background: #1a252f; font-size: 1.1rem; font-weight: bold; border-bottom: 1px solid #34495e; }
+        #candidate-list { flex-grow: 1; overflow-y: auto; padding: 10px; }
+        .candidate-item { padding: 12px; margin-bottom: 8px; background: #3e5871; border-radius: 6px; cursor: pointer; transition: 0.2s; border-left: 4px solid transparent; }
         .candidate-item:hover { background: #1abc9c; }
-        .control-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        button { padding: 12px 20px; margin: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-blue { background: #3498db; color: white; }
-        .btn-orange { background: #e67e22; color: white; }
-        #typing-indicator { color: #1abc9c; height: 20px; font-weight: bold; }
+        .candidate-item.active { background: #1abc9c; border-left: 4px solid #fff; }
+        .cat-tag { font-size: 0.7rem; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 10px; text-transform: uppercase; }
+
+        /* Main Content */
+        #content-wrapper { flex-grow: 1; display: flex; flex-direction: row; height: 100%; }
+
+        /* Column 1: Commands */
+        #command-section { width: 350px; border-right: 1px solid #ddd; display: flex; flex-direction: column; background: #fff; }
+        .section-header { padding: 15px; background: #f8f9fa; border-bottom: 1px solid #eee; font-weight: bold; }
+        .command-grid { padding: 15px; overflow-y: auto; flex-grow: 1; }
+        button { width: 100%; padding: 12px; margin-bottom: 10px; border: none; border-radius: 5px; cursor: pointer; font-weight: 600; text-align: left; transition: 0.2s; position: relative; }
+        .btn-cmd { background: #f0f2f5; color: #1c1e21; border: 1px solid #ccd0d5; }
+        .btn-cmd:hover { background: #e4e6eb; }
+        .btn-action { background: #0084ff; color: white; }
+        .upload-icon { float: right; font-size: 0.8rem; opacity: 0.6; }
+
+        /* Column 2: Chat/Logs */
+        #chat-section { flex-grow: 1; display: flex; flex-direction: column; background: #e5ddd5; position: relative; }
+        #chat-window { flex-grow: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; }
+        .msg { max-width: 80%; padding: 10px 15px; border-radius: 10px; margin-bottom: 10px; position: relative; font-size: 0.95rem; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .msg-examiner { align-self: flex-end; background: #dcf8c6; }
+        .msg-candidate { align-self: flex-start; background: #fff; }
+        .msg-time { display: block; font-size: 0.7rem; color: #888; margin-top: 5px; text-align: right; }
+        .file-link { color: #0084ff; font-weight: bold; text-decoration: none; display: block; margin-top: 5px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 4px; border: 1px dashed #0084ff; text-align: center; }
     </style>
 </head>
 <body>
 
+<div id="audio-lock">
+    <h2>Bank Interview System</h2>
+    <p>Please click to activate the control panel sounds.</p>
+    <button onclick="unlockAudio()" class="btn-action" style="width:auto; padding: 15px 40px;">Activate Dashboard</button>
+</div>
+
 <div id="sidebar">
-    <h3>Active Candidates</h3>
-    <div id="candidate-list">
-        <!-- Names will appear here automatically -->
+    <div class="sidebar-header">Live Candidates</div>
+    <div id="candidate-list"></div>
+</div>
+
+<div id="content-wrapper">
+    <!-- Column 1: Commands -->
+    <div id="command-section">
+        <div class="section-header">Control Panel: <span id="current-category-label" style="color:#0084ff">Select User</span></div>
+        <div id="typing-indicator" style="padding: 5px 20px; font-size: 0.8rem; color: #1abc9c; height: 20px;"></div>
+        <div class="command-grid" id="command-buttons">
+            <p style="color: #888; text-align: center; margin-top: 20px;">Select a candidate to see available tasks.</p>
+        </div>
+    </div>
+
+    <!-- Column 2: Chat Logs -->
+    <div id="chat-section">
+        <div class="section-header">Interview Transcript: <strong id="selected-name">None</strong></div>
+        <div id="chat-window"></div>
     </div>
 </div>
 
-<div id="main">
-    <div class="control-panel">
-        <h2>Control Panel</h2>
-        <p>Selected Candidate: <strong id="selected-name">None</strong></p>
-        <div id="typing-indicator"></div>
-        <hr>
-        <button class="btn-blue" onclick="sendTask('Welcome Screen')">Show Welcome Screen</button>
-        <button class="btn-orange" onclick="sendTask('Processing')">Show "Processing..."</button>
-        <button class="btn-blue" onclick="sendTask('Question 1')">Send Question 1</button>
-    </div>
-</div>
-
-<!-- ... existing style ... -->
 <script src="/socket.io/socket.io.js"></script>
 <script>
     const socket = io();
     let currentTarget = "";
-
-    // DEFINING SOUNDS (Make sure these files are in /public)
+    let currentCategory = "";
     const loginSound = new Audio('login.mp3');
     const submitSound = new Audio('submit.mp3');
 
-    socket.on('candidate_online', (data) => {
-        // Play login sound
-        loginSound.play().catch(e => console.log("Interaction needed for sound"));
+    // 1. Task Database (Mocking a JSON/DB structure)
+    // isForm: true means it's a data-entry screen
+    // hasUpload: true adds a visual hint to the examiner
+    const taskLibrary = {
+        general: [
+            { id: "Welcome Screen", isForm: false },
+            { id: "Processing", isForm: false },
+            { id: "Personal Bio Form", isForm: true },
+            { id: "Upload CV", isForm: true, hasUpload: true }
+        ],
+        banking: [
+            { id: "Specialty CD Form", isForm: true },
+            { id: "Affidavit Signature", isForm: true, hasUpload: true },
+            { id: "Account Opening", isForm: true }
+        ],
+        data: [
+            { id: "Data Analysis Task", isForm: true },
+            { id: "System Logic Test", isForm: true },
+            { id: "Upload Report", isForm: true, hasUpload: true }
+        ]
+    };
 
+    function unlockAudio() {
+        loginSound.play().then(() => {
+            loginSound.pause();
+            document.getElementById('audio-lock').style.display = 'none';
+        });
+    }
+
+    // Auto-update commands based on candidate's chosen category
+    function loadCategoryCommands(category) {
+        const grid = document.getElementById('command-buttons');
+        const label = document.getElementById('current-category-label');
+        grid.innerHTML = "";
+        label.innerText = category.toUpperCase();
+
+        const tasks = taskLibrary[category] || [];
+        
+        tasks.forEach(task => {
+            const btn = document.createElement('button');
+            btn.className = task.id === "Processing" ? "btn-action" : "btn-cmd";
+            
+            let uploadHint = task.hasUpload ? '<span class="upload-icon">📎 Upload</span>' : '';
+            btn.innerHTML = `${task.id} ${uploadHint}`;
+            
+            btn.onclick = () => sendTask(task.id);
+            grid.appendChild(btn);
+        });
+    }
+
+    socket.on('candidate_online', (data) => {
+        loginSound.play();
         const list = document.getElementById('candidate-list');
         const item = document.createElement('div');
         item.className = 'candidate-item';
-        item.innerText = data.name;
-        item.onclick = () => {
-            currentTarget = data.name;
-            document.getElementById('selected-name').innerText = data.name;
-        };
+        item.id = `user-${data.name}`;
+        // data.category comes from the vacancy choice in candidate portal
+        item.innerHTML = `<strong>${data.name}</strong> <span class="cat-tag">${data.category}</span><br><small>Ready to start</small>`;
+        item.onclick = () => selectCandidate(data.name, data.category);
         list.appendChild(item);
     });
 
-    // NEW: Notify when candidate submits
-    socket.on('notify_submission', (data) => {
-        submitSound.play().catch(e => console.log("Interaction needed for sound"));
-        alert(data.name + " has just submitted a task!");
-    });
-
-    socket.on('is_typing', (name) => {
-        const indicator = document.getElementById('typing-indicator');
-        indicator.innerText = name + " is typing...";
-        setTimeout(() => { indicator.innerText = ""; }, 3000);
-    });
+    function selectCandidate(name, category) {
+        currentTarget = name;
+        currentCategory = category;
+        document.getElementById('selected-name').innerText = name;
+        
+        // UI Highlighting
+        document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
+        document.getElementById(`user-${name}`).classList.add('active');
+        
+        // Auto-switch commands
+        loadCategoryCommands(category);
+        
+        // Clear chat window for focus (In a full app, you'd load history here)
+        document.getElementById('chat-window').innerHTML = ""; 
+    }
 
     function sendTask(taskName) {
-        if(!currentTarget) return alert("Select a candidate!");
+        if(!currentTarget) return alert("Please select a candidate from the sidebar first.");
         socket.emit('trigger_screen', { candidateId: currentTarget, screenData: taskName });
+        addMessage('examiner', `Screen Triggered: <strong>${taskName}</strong>`);
     }
+
+    socket.on('notify_submission', (data) => {
+        if(data.name === currentTarget) {
+            submitSound.play();
+            
+            let content = data.answer;
+            // Handle if the submission contains a file
+            if(data.fileUrl) {
+                content = `<strong>Submitted File:</strong> <a href="${data.fileUrl}" class="file-link" download>⬇ Download ${data.fileName || 'Attachment'}</a>`;
+            }
+            
+            addMessage('candidate', content);
+        }
+    });
+
+    function addMessage(sender, text) {
+        const win = document.getElementById('chat-window');
+        const div = document.createElement('div');
+        div.className = `msg msg-${sender}`;
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `${text} <span class="msg-time">${time}</span>`;
+        win.appendChild(div);
+        win.scrollTop = win.scrollHeight;
+    }
+
+    socket.on('is_typing', (name) => {
+        if(name === currentTarget) {
+            document.getElementById('typing-indicator').innerText = name + " is filling a form...";
+            setTimeout(() => { document.getElementById('typing-indicator').innerText = ""; }, 3000);
+        }
+    });
 </script>
 </body>
 </html>
