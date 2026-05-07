@@ -118,12 +118,32 @@ io.on('connection', (socket) => {
      * POINT 5: RESET SESSION
      */
     socket.on('reset_candidate', (email) => {
-        db.run(`DELETE FROM interactions WHERE candidate_email = ?`, [email], () => {
-            db.get(`SELECT s.file_path FROM screens s 
+        // 1. Wipe their transcript/history
+        db.run(`DELETE FROM interactions WHERE candidate_email = ?`, [email], (err) => {
+            if (err) return console.error(err);
+
+            // 2. Find their original starting screen based on their category
+            db.get(`SELECT s.file_path, s.screen_name FROM screens s 
                     JOIN candidates c ON c.category_id = s.category_id 
                     WHERE c.email = ? AND s.is_default = 1`, [email], (err, screen) => {
-                if (screen) {
-                    io.to(emailToSocket[email]).emit('new_task', { screenFile: screen.file_path, header: "Session Reset" });
+                
+                const targetSocketId = emailToSocket[email];
+                if (screen && targetSocketId) {
+                    // 3. SILENT PUSH: Use the actual screen name instead of "Session Reset"
+                    const payload = { 
+                        screenFile: screen.file_path, 
+                        header: "Welcome", // Or screen.screen_name
+                        subHeader: "Please begin the process." 
+                    };
+                    
+                    // 4. Emit force_reset so the candidate clears localStorage, 
+                    // then immediate new_task to show the first screen
+                    io.to(targetSocketId).emit('force_reset'); 
+                    
+                    // Small delay ensures the refresh/clear happens before the new task arrives
+                    setTimeout(() => {
+                        io.to(targetSocketId).emit('new_task', payload);
+                    }, 500);
                 }
             });
         });
@@ -133,9 +153,25 @@ io.on('connection', (socket) => {
      * POINT 7: REMOVE CANDIDATE
      */
     socket.on('remove_candidate', (email) => {
+        const targetSocketId = emailToSocket[email];
+
+        // 1. Mark as offline in DB
         db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [email], () => {
-            io.to(emailToSocket[email]).emit('force_disconnect');
-            io.emit('candidate_removed', email);
+            
+            if (targetSocketId) {
+                // 2. Tell the candidate to disconnect and clear their local data
+                io.to(targetSocketId).emit('force_logout');
+                
+                // 3. Forcefully close the socket on the server
+                const targetSocket = io.sockets.sockets.get(targetSocketId);
+                if (targetSocket) targetSocket.disconnect(true);
+            }
+
+            // 4. Clean up our tracking map
+            delete emailToSocket[email];
+
+            // 5. Tell all examiners to remove this person from their "Live" lists
+            io.emit('candidate_offline', email);
         });
     });
 
