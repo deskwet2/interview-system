@@ -119,47 +119,64 @@
             localStorage.setItem('cand_cat', selectedCategory);
         }
         
+        // Join the socket room immediately
         socket.emit('join_interview', { 
             name: candidateName, 
             email: candidateEmail, 
-            categoryId: selectedCategory // Sending categoryId to match server logic
+            categoryId: selectedCategory 
         });
-        
-        document.getElementById('screen-target').innerHTML = `<div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;"><h3>Connecting to Interview Server...</h3></div>`;
+
+        // --- NEW: RECOVERY LOGIC ---
+        const savedTask = localStorage.getItem('current_task');
+        if (isRestore && savedTask) {
+            const taskData = JSON.parse(savedTask);
+            currentScreenFile = taskData.screenFile;
+            renderScreen(taskData);
+        } else {
+            // Only show "Connecting" if it's a fresh start or no task was saved
+            document.getElementById('screen-target').innerHTML = `
+                <div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;">
+                    <h3>Connecting to Interview Server...</h3>
+                </div>`;
+        }
     }
 
     // 100% Takeover Screen Loader
     socket.on('new_task', async (data) => {
-        // Handle Redirection Command (Point 7)
         if (data.redirectUrl) {
             window.location.href = data.redirectUrl;
             return;
         }
 
+        // --- NEW: PERSIST THE TASK STATE ---
+        localStorage.setItem('current_task', JSON.stringify(data));
+        
         currentScreenFile = data.screenFile;
+        renderScreen(data); // Move rendering to a separate function for reuse
+    });
+
+
+    // Helper to keep code clean and reusable
+    async function renderScreen(data) {
         try {
             const response = await fetch(`/screens/${data.screenFile}`);
             if (!response.ok) throw new Error("File not found");
             const html = await response.text();
             
-            // Wipe UI and inject entire Screen (CSS + HTML)
             document.getElementById('screen-target').innerHTML = html;
 
-            // Map Custom Headers to Screen if IDs exist
             if(document.getElementById('main-header')) document.getElementById('main-header').innerText = data.header || "";
             if(document.getElementById('sub-header')) document.getElementById('sub-header').innerText = data.subHeader || "";
 
-            // Handle Dynamic Form Logic
             const form = document.querySelector('form');
             if(form) {
                 form.onsubmit = (e) => { e.preventDefault(); validateAndSubmit(); };
-                // Using the specific 'typing' event for the Examiner's indicator
                 form.oninput = () => socket.emit('typing', { email: candidateEmail });
             }
         } catch (err) {
             document.getElementById('screen-target').innerHTML = `<p style="color:red; padding:20px;">System Error: Failed to load ${data.screenFile}</p>`;
         }
-    });
+    }
 
     // Dedicated Redirection Listener to ensure Point 4 & 7 works flawlessly
     socket.on('redirect_command', (data) => {
