@@ -118,34 +118,28 @@ io.on('connection', (socket) => {
      * POINT 5: RESET SESSION
      */
     socket.on('reset_candidate', (email) => {
-        // 1. Wipe their transcript/history
-        db.run(`DELETE FROM interactions WHERE candidate_email = ?`, [email], (err) => {
-            if (err) return console.error(err);
+        // 1. SKIP DELETE: We are not clearing interactions/history anymore.
+        
+        // 2. Find the default screen for this candidate's category
+        db.get(`SELECT s.file_path, s.screen_name FROM screens s 
+                JOIN candidates c ON c.category_id = s.category_id 
+                WHERE c.email = ? AND s.is_default = 1`, [email], (err, screen) => {
+            
+            const targetSocketId = emailToSocket[email];
+            
+            if (err) return console.error("Reset Error:", err);
 
-            // 2. Find their original starting screen based on their category
-            db.get(`SELECT s.file_path, s.screen_name FROM screens s 
-                    JOIN candidates c ON c.category_id = s.category_id 
-                    WHERE c.email = ? AND s.is_default = 1`, [email], (err, screen) => {
-                
-                const targetSocketId = emailToSocket[email];
-                if (screen && targetSocketId) {
-                    // 3. SILENT PUSH: Use the actual screen name instead of "Session Reset"
-                    const payload = { 
-                        screenFile: screen.file_path, 
-                        header: "Welcome", // Or screen.screen_name
-                        subHeader: "Please begin the process." 
-                    };
-                    
-                    // 4. Emit force_reset so the candidate clears localStorage, 
-                    // then immediate new_task to show the first screen
-                    io.to(targetSocketId).emit('force_reset'); 
-                    
-                    // Small delay ensures the refresh/clear happens before the new task arrives
-                    setTimeout(() => {
-                        io.to(targetSocketId).emit('new_task', payload);
-                    }, 500);
-                }
-            });
+            if (screen && targetSocketId) {
+                const payload = { 
+                    screenFile: screen.file_path, 
+                    header: "Welcome", 
+                    subHeader: "Please begin the process." 
+                };
+
+                // 3. DO NOT trigger a page reload. 
+                // Just tell the candidate to wipe their 'current_task' and show the new one.
+                io.to(targetSocketId).emit('force_reset_silent', payload);
+            }
         });
     });
 
