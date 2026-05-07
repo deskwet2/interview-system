@@ -16,7 +16,7 @@ const initDb = () => {
                 default_redirect_url TEXT
             )`);
 
-            // 2. Screens (Point 2)
+            // 2. Screens
             db.run(`CREATE TABLE IF NOT EXISTS screens (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 category_id INTEGER,
@@ -26,8 +26,7 @@ const initDb = () => {
                 FOREIGN KEY (category_id) REFERENCES categories (id)
             )`);
 
-            // 3. Candidates (Points 6, 7 & 8)
-            // Added last_socket_id to manage real-time mapping
+            // 3. Candidates
             db.run(`CREATE TABLE IF NOT EXISTS candidates (
                 email TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
@@ -38,7 +37,7 @@ const initDb = () => {
                 FOREIGN KEY (category_id) REFERENCES categories (id)
             )`);
 
-            // 4. Interactions (Point 3)
+            // 4. Interactions
             db.run(`CREATE TABLE IF NOT EXISTS interactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 candidate_email TEXT,
@@ -47,10 +46,30 @@ const initDb = () => {
                 content TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (candidate_email) REFERENCES candidates (email)
+            )`);
+
+            // 5. NEW: Examiners Table
+            db.run(`CREATE TABLE IF NOT EXISTS examiners (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                telegram_key TEXT,
+                chat_id TEXT,
+                status INTEGER DEFAULT 1,
+                is_moderator INTEGER DEFAULT 0
             )`, (err) => {
-                if (err) reject(err);
-                else {
-                    console.log("Database initialized.");
+                if (err) {
+                    reject(err);
+                } else {
+                    // Optional: Auto-create a default admin if table is empty
+                    db.get("SELECT count(*) as count FROM examiners", (err, row) => {
+                        if (row && row.count === 0) {
+                            db.run(`INSERT INTO examiners (username, password, is_moderator) 
+                                    VALUES ('admin', 'admin123', 1)`);
+                            console.log("Default moderator account created: admin/admin123");
+                        }
+                    });
+                    console.log("Database initialized with Examiners table.");
                     resolve();
                 }
             });

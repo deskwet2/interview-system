@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Portal | Login</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --bg: #f4f7f6; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: var(--bg); 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 100vh; 
+            margin: 0; 
+        }
+        .login-card {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .login-card h2 { color: var(--primary); margin-bottom: 8px; font-weight: 600; }
+        .login-card p { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 30px; }
+        
+        .form-group { text-align: left; margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #34495e; font-weight: bold; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus { outline: none; border-color: var(--accent); }
+
+        .btn-login {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.1s;
+        }
+        .btn-login:hover { background: #1a252f; }
+        .btn-login:active { transform: scale(0.98); }
+        .btn-login:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+        .error-msg { color: #e74c3c; font-size: 0.85rem; margin-top: 15px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <h2>Staff Portal</h2>
+        <p>Enter your credentials to manage interviews</p>
+
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="user" placeholder="Enter username" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="pass" placeholder="••••••••">
+        </div>
+
+        <button id="loginBtn" class="btn-login" onclick="doLogin()">Login to Dashboard</button>
+        <div id="error" class="error-msg">Invalid username or password</div>
+    </div>
+
+    <script>
+        async function doLogin() {
+            const btn = document.getElementById('loginBtn');
+            const error = document.getElementById('error');
+            const user = document.getElementById('user').value;
+            const pass = document.getElementById('pass').value;
+
+            if(!user || !pass) return;
+
+            // UI Feedback
+            btn.disabled = true;
+            btn.innerText = "Authenticating...";
+            error.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+
+                const data = await res.json();
+
+                if(data.success) {
+                    // Set cookie for security (expires in 8 hours)
+                    const date = new Date();
+                    date.setTime(date.getTime() + (8*60*60*1000));
+                    document.cookie = `user_role=${data.role}; expires=${date.toUTCString()}; path=/`;
+                    
+                    // Redirect based on role
+                    window.location.href = (data.role === 'moderator') ? 'moderator.html' : 'examiner.html';
+                } else {
+                    throw new Error("Unauthorized");
+                }
+            } catch (err) {
+                error.style.display = 'block';
+                btn.disabled = false;
+                btn.innerText = "Login to Dashboard";
+            }
+        }
+
+        // Allow "Enter" key to submit
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') doLogin();
+        });
+    </script>
+</body>
+</html>

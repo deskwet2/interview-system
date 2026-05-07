@@ -7,9 +7,31 @@ const { db, initDb } = require('./database');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const https = require('https');
 
 // Initialize SQLite Tables
 initDb();
+
+
+
+function notifyExaminers(candidateName, categoryName) {
+    const message = `🔔 *New Candidate Joined*\n\n👤 Name: ${candidateName}\n💼 Category: ${categoryName}\n🕒 Time: ${new Date().toLocaleTimeString()}`;
+
+    // 1. Get all active examiners who have set up Telegram
+    db.all(`SELECT telegram_key, chat_id FROM examiners WHERE status = 1 AND chat_id IS NOT NULL`, [], (err, examiners) => {
+        if (err || !examiners) return;
+
+        examiners.forEach(admin => {
+            const url = `https://api.telegram.org/bot${admin.telegram_key}/sendMessage?chat_id=${admin.chat_id}&text=${encodeURIComponent(message)}&parse_mode=Markdown`;
+
+            https.get(url, (res) => {
+                // Sent successfully
+            }).on('error', (e) => {
+                console.error(`Telegram failed for ${admin.chat_id}:`, e.message);
+            });
+        });
+    });
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/screens', express.static(path.join(__dirname, 'screens')));
@@ -29,16 +51,13 @@ io.on('connection', (socket) => {
         emailToSocket[email] = socket.id;
         socket.email = email;
 
-        // FIX 1: Always update the DB to 'live' immediately on join/refresh
         db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email]);
 
         db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
             if (candidate) {
-                // REFRESH SCENARIO
+                // REFRESH SCENARIO - No Telegram alert here to prevent spam
                 db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
                     socket.emit('restore_session', { candidate, history });
-                    
-                    // Fetch category name for the examiner's UI
                     db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
                         io.emit('candidate_online', { 
                             ...candidate, 
@@ -48,7 +67,7 @@ io.on('connection', (socket) => {
                     });
                 });
             } else {
-                // NEW CANDIDATE SCENARIO
+                // NEW CANDIDATE SCENARIO - Trigger Telegram Alert
                 db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
                     [email, name, categoryId], function() {
                     
@@ -59,10 +78,16 @@ io.on('connection', (socket) => {
                     });
 
                     db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                        const categoryName = cat ? cat.name : 'General';
+                        
+                        // --- TELEGRAM NOTIFICATION ---
+                        notifyExaminers(name, categoryName);
+                        // ------------------------------
+
                         io.emit('candidate_online', { 
                             email, name, category_id: categoryId, 
                             status: 'live', 
-                            category_name: cat ? cat.name : 'General' 
+                            category_name: categoryName
                         });
                     });
                 });
@@ -310,6 +335,58 @@ app.get('/api/vacancies', (req, res) => {
     db.all(`SELECT id, name FROM categories`, [], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
+    });
+});
+
+// 1. Get all examiners
+app.get('/api/examiners', (req, res) => {
+    db.all(`SELECT id, username, chat_id, status, is_moderator FROM examiners`, [], (err, rows) => {
+        res.json(rows);
+    });
+});
+
+// 2. Add new examiner
+app.post('/api/examiners', express.json(), (req, res) => {
+    const { username, pass, tkey, chatid, isMod } = req.body;
+    db.run(`INSERT INTO examiners (username, password, telegram_key, chat_id, is_moderator) VALUES (?, ?, ?, ?, ?)`,
+        [username, pass, tkey, chatid, isMod], (err) => {
+            if (err) return res.status(500).send(err.message);
+            res.sendStatus(200);
+        });
+});
+
+// 3. Delete examiner
+app.delete('/api/examiners/:id', (req, res) => {
+    db.run(`DELETE FROM examiners WHERE id = ?`, [req.params.id], (err) => {
+        res.sendStatus(200);
+    });
+});
+
+// 4. LOGIN ENDPOINT (Critical for security)
+app.post('/api/login', express.json(), (req, res) => {
+    const { username, password } = req.body;
+    
+    // We select specific columns only for security
+    const query = `SELECT id, username, is_moderator FROM examiners 
+                   WHERE username = ? AND password = ? AND status = 1`;
+
+    db.get(query, [username, password], (err, user) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: "Server error" });
+        }
+
+        if (user) {
+            const role = user.is_moderator ? 'moderator' : 'examiner';
+            
+            // Note: In a production app, you'd set the cookie here using res.cookie()
+            // with the 'httpOnly: true' flag to prevent XSS.
+            res.json({ 
+                success: true, 
+                role: role 
+            });
+        } else {
+            res.status(401).json({ success: false, message: "Invalid credentials" });
+        }
     });
 });
 

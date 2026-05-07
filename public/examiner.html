@@ -9,6 +9,11 @@
         #sidebar { width: 300px; background: #2c3e50; color: white; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; background: #1a252f; font-size: 1.1rem; font-weight: bold; border-bottom: 1px solid #34495e; }
         
+        /* Sidebar Footer for Security & Routing */
+        .sidebar-footer { padding: 15px; background: #1a252f; border-top: 1px solid #34495e; }
+        #mod-link { display: none; width: 100%; padding: 10px; background: #f1c40f; color: #1a252f; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-bottom: 10px; text-decoration: none; text-align: center; font-size: 0.85rem; }
+        .btn-logout { width: 100%; padding: 8px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+
         /* Point 8: Filter Bar */
         .filter-bar { padding: 10px; background: #1a252f; display: flex; gap: 5px; }
         .filter-btn { flex: 1; padding: 5px; font-size: 0.75rem; cursor: pointer; border: none; border-radius: 3px; background: #34495e; color: white; }
@@ -65,6 +70,11 @@
         <button class="filter-btn" onclick="filterList(this, 'all')">All Records</button>
     </div>
     <div id="candidate-list"></div>
+    
+    <div class="sidebar-footer">
+        <a href="moderator.html" id="mod-link">🛡️ MODERATOR PANEL</a>
+        <button class="btn-logout" onclick="logout()">Sign Out</button>
+    </div>
 </div>
 
 <div id="content-wrapper">
@@ -88,6 +98,23 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    // --- SECURITY GATEKEEPER & SESSION CHECK ---
+    const getRole = () => document.cookie.split('; ').find(row => row.startsWith('user_role='))?.split('=')[1];
+    
+    if (!getRole()) {
+        window.location.href = 'login.html';
+    }
+
+    if (getRole() === 'moderator') {
+        document.getElementById('mod-link').style.display = 'block';
+    }
+
+    function logout() {
+        document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        window.location.href = 'login.html';
+    }
+
+    // --- ORIGINAL LOGIC COMMENCES ---
     const socket = io();
     let currentTargetEmail = "";
     let currentTargetName = "";
@@ -209,10 +236,20 @@
         grid.innerHTML = `
             <div class="action-row">
                 <button class="btn-warning" onclick="resetSession()">🔄 Reset Session</button>
-                <button class="btn-danger" onclick="markWrong()">❌ Mark Wrong</button>
+                 <button class="btn-danger" style="background:#c0392b" onclick="removeCandidate()">🚫 Remove Candidate</button>
             </div>
             <div class="action-row">
-                <button class="btn-danger" style="background:#c0392b" onclick="removeCandidate()">🚫 Remove Candidate</button>
+               <div class="command-container" style="flex: 1; margin-bottom: 0;">
+                    <div class="command-main">
+                        <button class="btn-danger" style="flex-grow:1" onclick="markWrong()">❌ Mark Wrong</button>
+                        <button class="btn-edit-toggle" onclick="toggleEdit('wrong')">⚙️</button>
+                    </div>
+                    <div id="edit-wrong" class="edit-dropdown">
+                        <input type="text" id="custom-wrong-msg" class="editor-input" 
+                            placeholder="Custom Error Message..." 
+                            value="Information mismatch. Please review your entries and try again.">
+                    </div>
+                </div>
             </div>
             <hr>
             <h4>Category Screens</h4>
@@ -288,13 +325,21 @@
     }
 
     function markWrong() {
-        if(!currentTargetEmail) return alert("Select a candidate first");
-        // Ensure the key matches what the server expects: candidateEmail
+        if (!currentTargetEmail) return alert("Select a candidate first");
+
+        // Grab the custom text from the editor input
+        const customMsg = document.getElementById('custom-wrong-msg').value;
+        const finalMessage = customMsg.trim() !== "" ? customMsg : "Information mismatch. Please try again.";
+
         socket.emit('mark_wrong', { 
             candidateEmail: currentTargetEmail, 
-            message: "Information mismatch. Please review your entries and try again." 
+            message: finalMessage 
         });
-        addMessage('examiner', `<span style="color:red; font-weight:bold;">⚠️ WRONG ANSWER ALERT SENT</span>`);
+
+        addMessage('examiner', `<span style="color:red; font-weight:bold;">⚠️ ALERT SENT:</span> ${finalMessage}`);
+        
+        // Optional: Close the edit dropdown after sending
+        document.getElementById('edit-wrong').classList.remove('open');
     }
 
     // POINT 4: Redirect Command
