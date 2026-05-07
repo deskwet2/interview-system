@@ -32,7 +32,7 @@ const initDb = () => {
                 email TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 category_id INTEGER,
-                status TEXT DEFAULT 'live',
+                status TEXT DEFAULT 'offline',
                 last_socket_id TEXT,
                 last_connected DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (category_id) REFERENCES categories (id)

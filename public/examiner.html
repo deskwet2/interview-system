@@ -61,8 +61,8 @@
 <div id="sidebar">
     <div class="sidebar-header">Interview Management</div>
     <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterList(event, 'live')">Live</button>
-        <button class="filter-btn" onclick="filterList('all')">All Records</button>
+        <button class="filter-btn active" onclick="filterList(this, 'live')">Live</button>
+        <button class="filter-btn" onclick="filterList(this, 'all')">All Records</button>
     </div>
     <div id="candidate-list"></div>
 </div>
@@ -99,6 +99,11 @@
     // These will eventually be fetched from the DB (Phase 2/3)
     let taskLibrary = []; 
 
+    window.onload = () => {    // Check if audio is already unlocked or show lock
+        socket.emit('request_list_refresh'); 
+    };
+    
+
     function unlockAudio() {
         loginSound.play().then(() => {
             loginSound.pause();
@@ -109,6 +114,12 @@
     // POINT 6: Load existing sessions from Database
     socket.on('sync_sessions', (candidates) => {
         refreshCandidateList(candidates);
+        
+        // If we had a candidate selected before refresh, try to re-highlight them
+        if(currentTargetEmail) {
+            const activeItem = document.getElementById(`user-${currentTargetEmail.replace(/[@.]/g, '_')}`);
+            if(activeItem) activeItem.classList.add('active');
+        }
     });
 
     socket.on('candidate_online', (data) => {
@@ -117,10 +128,26 @@
         socket.emit('request_list_refresh'); 
     });
 
-    function filterList(e, mode) {
+    socket.on('candidate_offline', (email) => {
+        // Update the UI immediately without a full refresh if preferred
+        const item = document.getElementById(`user-${email.replace(/[@.]/g, '_')}`);
+        if (item && viewMode === 'live') {
+            item.remove(); // Remove from live view immediately
+        } else if (item) {
+            item.classList.add('offline');
+        }
+    });
+
+    function filterList(btnElement, mode) {
         viewMode = mode;
+        
+        // Remove active class from all buttons
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        e.target.classList.add('active'); // Now 'e' is defined
+        
+        // Add active class to the clicked button
+        btnElement.classList.add('active');
+        
+        // Tell server to give us the latest data
         socket.emit('request_list_refresh');
     }
 
@@ -129,18 +156,36 @@
         list.innerHTML = "";
         
         candidates.forEach(can => {
+            // Fix: If viewMode is 'live', only show live users. 
+            // If viewMode is 'all', show EVERYONE regardless of status.
             if (viewMode === 'live' && can.status !== 'live') return;
 
             const item = document.createElement('div');
-            item.className = `candidate-item ${can.status !== 'live' ? 'offline' : ''}`;
+            // If the user is offline, give them the 'offline' class for styling
+            const isOffline = can.status !== 'live';
+            item.className = `candidate-item ${isOffline ? 'offline' : ''}`;
+            
+            // Ensure the ID is clean for CSS selection
             item.id = `user-${can.email.replace(/[@.]/g, '_')}`;
+            
             item.innerHTML = `
-                <strong>${can.name}</strong> <span class="cat-tag">${can.category_name || 'User'}</span>
-                <br><small>${can.email}</small>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>${can.name}</strong>
+                    <span class="cat-tag">${can.category_name || 'User'}</span>
+                </div>
+                <small>${can.email}</small>
+                ${isOffline ? '<br><span style="font-size:0.6rem; color:#bdc3c7;">● OFFLINE</span>' : '<br><span style="font-size:0.6rem; color:#1abc9c;">● ONLINE</span>'}
             `;
+            
             item.onclick = (e) => selectCandidate(e, can);
             list.appendChild(item);
         });
+
+        // Re-highlight the selected candidate if they are still in the list
+        if(currentTargetEmail) {
+            const activeItem = document.getElementById(`user-${currentTargetEmail.replace(/[@.]/g, '_')}`);
+            if(activeItem) activeItem.classList.add('active');
+        }
     }
 
     async function selectCandidate(e, candidate) {
@@ -243,8 +288,13 @@
     }
 
     function markWrong() {
-        socket.emit('mark_wrong', { candidateEmail: currentTargetEmail, message: "Information mismatch. Please re-enter." });
-        addMessage('examiner', `<span style="color:red">⚠️ Error Warning Sent</span>`);
+        if(!currentTargetEmail) return alert("Select a candidate first");
+        // Ensure the key matches what the server expects: candidateEmail
+        socket.emit('mark_wrong', { 
+            candidateEmail: currentTargetEmail, 
+            message: "Information mismatch. Please review your entries and try again." 
+        });
+        addMessage('examiner', `<span style="color:red; font-weight:bold;">⚠️ WRONG ANSWER ALERT SENT</span>`);
     }
 
     // POINT 4: Redirect Command

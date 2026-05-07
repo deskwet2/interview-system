@@ -27,32 +27,63 @@ io.on('connection', (socket) => {
     socket.on('join_interview', async (data) => {
         const { name, email, categoryId } = data;
         emailToSocket[email] = socket.id;
-        socket.email = email; // Attach email to socket object
+        socket.email = email;
 
-        // Check if candidate exists
+        // FIX 1: Always update the DB to 'live' immediately on join/refresh
+        db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email]);
+
         db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
             if (candidate) {
-                // REFRESH SCENARIO: Load history and last state
+                // REFRESH SCENARIO
                 db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
                     socket.emit('restore_session', { candidate, history });
-                    io.emit('candidate_online', { ...candidate, status: 'live' });
+                    
+                    // Fetch category name for the examiner's UI
+                    db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
+                        io.emit('candidate_online', { 
+                            ...candidate, 
+                            status: 'live',
+                            category_name: cat ? cat.name : 'General' 
+                        });
+                    });
                 });
             } else {
                 // NEW CANDIDATE SCENARIO
                 db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
-                    [email, name, categoryId], () => {
+                    [email, name, categoryId], function() {
                     
-                    // Fetch default screen for this category (Point 2)
                     db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
                         if (screen) {
-                            const payload = { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." };
-                            socket.emit('new_task', payload);
+                            socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
                         }
                     });
-                    io.emit('candidate_online', { email, name, category_id: categoryId, status: 'live' });
+
+                    db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                        io.emit('candidate_online', { 
+                            email, name, category_id: categoryId, 
+                            status: 'live', 
+                            category_name: cat ? cat.name : 'General' 
+                        });
+                    });
                 });
             }
         });
+    });
+
+
+
+    socket.on('disconnect', () => {
+        if (socket.email) {
+            // FIX 2: Use a callback for the disconnect to ensure the emit happens 
+            // AFTER the database has successfully marked them offline
+            db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [socket.email], () => {
+                io.emit('candidate_offline', socket.email);
+                console.log(`Candidate ${socket.email} is now offline.`);
+            });
+            
+            // Clean up memory map
+            delete emailToSocket[socket.email];
+        }
     });
 
     /**
@@ -119,14 +150,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('disconnect', () => {
-        if (socket.email) {
-            db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [socket.email]);
-            io.emit('candidate_offline', socket.email);
-        }
-    });
-
-
 
     /**
      * REFRESH FIX: Fetching the Full Candidate List for Examiner
@@ -158,6 +181,15 @@ io.on('connection', (socket) => {
         db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, rows) => {
             socket.emit('receive_history', rows);
         });
+    });
+
+
+    socket.on('mark_wrong', (data) => {
+        const { candidateEmail, message } = data;
+        const targetSocket = emailToSocket[candidateEmail];
+        if (targetSocket) {
+            io.to(targetSocket).emit('wrong_answer', { message });
+        }
     });
 });
 
