@@ -51,47 +51,54 @@ io.on('connection', (socket) => {
         emailToSocket[email] = socket.id;
         socket.email = email;
 
-        db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email]);
-
-        db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
-            if (candidate) {
-                // REFRESH SCENARIO - No Telegram alert here to prevent spam
-                db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
-                    socket.emit('restore_session', { candidate, history });
-                    db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
-                        io.emit('candidate_online', { 
-                            ...candidate, 
-                            status: 'live',
-                            category_name: cat ? cat.name : 'General' 
-                        });
-                    });
-                });
-            } else {
-                // NEW CANDIDATE SCENARIO - Trigger Telegram Alert
-                db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
-                    [email, name, categoryId], function() {
-                    
-                    db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
-                        if (screen) {
-                            socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
-                        }
-                    });
-
-                    db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                        const categoryName = cat ? cat.name : 'General';
+        // FIX: Perform the update first and wait for it to complete before fetching state
+        db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email], (err) => {
+            
+            db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
+                if (candidate) {
+                    // --- REFRESH SCENARIO ---
+                    db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
+                        // Send history back to the candidate immediately
+                        socket.emit('restore_session', { candidate, history });
                         
-                        // --- TELEGRAM NOTIFICATION ---
-                        notifyExaminers(name, categoryName);
-                        // ------------------------------
-
-                        io.emit('candidate_online', { 
-                            email, name, category_id: categoryId, 
-                            status: 'live', 
-                            category_name: categoryName
+                        db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
+                            const categoryName = cat ? cat.name : 'General';
+                            
+                            // Notify examiner that the candidate is back online
+                            io.emit('candidate_online', { 
+                                ...candidate, 
+                                status: 'live', // Force 'live' status in the payload
+                                category_name: categoryName 
+                            });
                         });
                     });
-                });
-            }
+                } else {
+                    // --- NEW CANDIDATE SCENARIO ---
+                    db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
+                        [email, name, categoryId], function() {
+                        
+                        // Push the default screen for the category
+                        db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
+                            if (screen) {
+                                socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
+                            }
+                        });
+
+                        db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                            const categoryName = cat ? cat.name : 'General';
+                            
+                            // Telegram Alert for NEW users only
+                            notifyExaminers(name, categoryName);
+
+                            io.emit('candidate_online', { 
+                                email, name, category_id: categoryId, 
+                                status: 'live', 
+                                category_name: categoryName
+                            });
+                        });
+                    });
+                }
+            });
         });
     });
 
