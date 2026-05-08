@@ -73,6 +73,13 @@
     
     <div class="sidebar-footer">
         <a href="moderator.html" id="mod-link">🛡️ MODERATOR PANEL</a>
+        <div class="presence-control">
+            <label class="switch">
+                <input type="checkbox" id="live-toggle" onchange="updatePresence(this.checked)">
+                <span class="slider round"></span>
+            </label>
+            <span id="presence-status">Offline</span>
+        </div>
         <button class="btn-logout" onclick="logout()">Sign Out</button>
     </div>
 </div>
@@ -388,6 +395,18 @@
         div.innerHTML = `${text} <span class="msg-time">${new Date().toLocaleTimeString()}</span>`;
         win.appendChild(div);
         win.scrollTop = win.scrollHeight;
+    }
+
+    function updatePresence(isOnline) {
+        const statusText = document.getElementById('presence-status');
+        statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
+        statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
+        
+        // Emit to server (Loophole 3)
+        socket.emit('toggle_online', { 
+            username: localStorage.getItem('examiner_user'), 
+            isOnline: isOnline 
+        });
     }
 </script>
 </body>

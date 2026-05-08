@@ -3,103 +3,155 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { db, initDb } = require('./database');
-
+const nodemailer = require('nodemailer');
+const cookieParser = require('cookie-parser');
+const https = require('https');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const https = require('https');
+
 
 // Initialize SQLite Tables
 initDb();
 
+app.use(express.json());
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/screens', express.static(path.join(__dirname, 'screens')));
 
 
-function notifyExaminers(candidateName, categoryName) {
-    const message = `🔔 *New Candidate Joined*\n\n👤 Name: ${candidateName}\n💼 Category: ${categoryName}\n🕒 Time: ${new Date().toLocaleTimeString()}`;
+/**
+ * CHECK BOT GATEWAY MIDDLEWARE
+ */
+const gatewayCheck = (req, res, next) => {
+    const publicPaths = ['/', '/gatekeeper', '/api/verify-human'];
+    if (publicPaths.includes(req.path) || req.cookies.verified_human) {
+        next();
+    } else {
+        res.redirect('/gatekeeper');
+    }
+};
+app.use(gatewayCheck);
 
-    // 1. Get all active examiners who have set up Telegram
-    db.all(`SELECT telegram_key, chat_id FROM examiners WHERE status = 1 AND chat_id IS NOT NULL`, [], (err, examiners) => {
-        if (err || !examiners) return;
 
-        examiners.forEach(admin => {
-            const url = `https://api.telegram.org/bot${admin.telegram_key}/sendMessage?chat_id=${admin.chat_id}&text=${encodeURIComponent(message)}&parse_mode=Markdown`;
+/**
+ * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM
+ */
+async function notifyExaminers(candidateName, categoryName) {
+    const textMsg = `🔔 New Candidate: ${candidateName}\n💼 Category: ${categoryName}`;
 
-            https.get(url, (res) => {
-                // Sent successfully
-            }).on('error', (e) => {
-                console.error(`Telegram failed for ${admin.chat_id}:`, e.message);
+    // Get Active Settings and Examiners
+    db.get(`SELECT * FROM mailer_settings WHERE is_active = 1`, [], (err, smtp) => {
+        db.all(`SELECT telegram_key, chat_id, email FROM examiners WHERE status = 1`, [], (err, examiners) => {
+            if (err || !examiners) return;
+
+            examiners.forEach(ex => {
+                // Telegram Channel
+                if (ex.telegram_key && ex.chat_id) {
+                    const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(textMsg)}`;
+                    https.get(url).on('error', (e) => console.error("Telegram Fail:", e.message));
+                }
+
+                // Email Channel
+                if (ex.email && smtp) {
+                    let transporter = nodemailer.createTransport({
+                        host: smtp.host,
+                        port: smtp.port,
+                        secure: smtp.port === 465,
+                        auth: { user: smtp.user, pass: smtp.pass }
+                    });
+                    transporter.sendMail({
+                        from: smtp.from_email,
+                        to: ex.email,
+                        subject: "New Interview Candidate",
+                        text: textMsg
+                    }).catch(e => console.error("Email Fail:", e.message));
+                }
             });
         });
     });
 }
 
-app.use(express.static(path.join(__dirname, 'public')));
-app.use('/screens', express.static(path.join(__dirname, 'screens')));
+
 
 
 // Memory Map to link Email to the current Active Socket
-let emailToSocket = {}; 
+let emailToSocket = {};
+let joinAttempts = {};
 
 io.on('connection', (socket) => {
-    console.log('New connection attempt...');
+    
 
     /**
      * POINT 6: HANDLE REFRESH BUG (Identity by Email)
      */
     socket.on('join_interview', async (data) => {
         const { name, email, categoryId } = data;
-        emailToSocket[email] = socket.id;
-        socket.email = email;
-
-        // FIX: Perform the update first and wait for it to complete before fetching state
-        db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email], (err) => {
-            
-            db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
-                if (candidate) {
-                    // --- REFRESH SCENARIO ---
-                    db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
-                        // Send history back to the candidate immediately
-                        socket.emit('restore_session', { candidate, history });
-                        
-                        db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
-                            const categoryName = cat ? cat.name : 'General';
-                            
-                            // Notify examiner that the candidate is back online
-                            io.emit('candidate_online', { 
-                                ...candidate, 
-                                status: 'live', // Force 'live' status in the payload
-                                category_name: categoryName 
-                            });
-                        });
+        
+        // LOOPHOLE 2: Check for Online Examiners
+        db.get(`SELECT COUNT(*) as activeCount FROM examiners WHERE status = 1`, [], (err, row) => {
+            if (!row || row.activeCount === 0) {
+                joinAttempts[email] = (joinAttempts[email] || 0) + 1;
+                
+                if (joinAttempts[email] > 3) {
+                    // Redirect to default category URL after 3 fails
+                    db.get(`SELECT default_redirect_url FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                        socket.emit('redirect_command', { url: cat ? cat.default_redirect_url : '/' });
+                        delete joinAttempts[email];
                     });
-                } else {
-                    // --- NEW CANDIDATE SCENARIO ---
-                    db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
-                        [email, name, categoryId], function() {
-                        
-                        // Push the default screen for the category
-                        db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
-                            if (screen) {
-                                socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
-                            }
-                        });
-
-                        db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                            const categoryName = cat ? cat.name : 'General';
-                            
-                            // Telegram Alert for NEW users only
-                            notifyExaminers(name, categoryName);
-
-                            io.emit('candidate_online', { 
-                                email, name, category_id: categoryId, 
-                                status: 'live', 
-                                category_name: categoryName
-                            });
-                        });
-                    });
+                    return;
                 }
+                // Notify examiners anyway (in case they forgot to toggle) and tell candidate to retry
+                notifyExaminers(name, "WAITING - " + (joinAttempts[email]));
+                socket.emit('retry_connection', { attempt: joinAttempts[email] });
+                return;
+            }
+
+            // Normal Joining Logic (from your original file)
+            emailToSocket[email] = socket.id;
+            socket.email = email;
+            joinAttempts[email] = 0;
+
+            db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email], () => {
+                db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
+                    if (candidate) {
+                        db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
+                            socket.emit('restore_session', { candidate, history });
+                            db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
+                                io.emit('candidate_online', { ...candidate, status: 'live', category_name: cat ? cat.name : 'General' });
+                            });
+                        });
+                    } else {
+                        db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
+                            [email, name, categoryId], function() {
+                            db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
+                                if (screen) socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
+                            });
+                            db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                                notifyExaminers(name, cat ? cat.name : 'General');
+                                io.emit('candidate_online', { email, name, category_id: categoryId, status: 'live', category_name: cat ? cat.name : 'General' });
+                            });
+                        });
+                    }
+                });
             });
         });
+    });
+
+
+    socket.on('retry_connection', (data) => {
+        showOverlay(`No examiners online. Retrying... (Attempt ${data.attempt}/3)`);
+        setTimeout(() => {
+            // Re-trigger the join call automatically
+            socket.emit('join_interview', { name, email, categoryId });
+        }, 5000); // 5 second delay between retries
+    });
+
+
+    // LOOPHOLE 3: Examiner Status Toggle
+    socket.on('toggle_online', (data) => {
+        const status = data.isOnline ? 1 : 0;
+        db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [status, data.username]);
     });
 
 
@@ -118,9 +170,9 @@ io.on('connection', (socket) => {
                     // Only delete from map if it's the current socket
                     delete emailToSocket[email];
                 });
-            } else {
-                console.log(`Socket ${socket.id} closed, but ${email} has already reconnected on a new socket.`);
             }
+
+            db.run(`UPDATE examiners SET status = 0 WHERE socket_id = ?`, [socket.id]);
         }
     });
 
@@ -379,9 +431,9 @@ app.delete('/api/examiners/:id', (req, res) => {
 app.post('/api/login', express.json(), (req, res) => {
     const { username, password } = req.body;
     
-    // We select specific columns only for security
+    // 1. Remove "AND status = 1" from the query to allow login even if currently offline
     const query = `SELECT id, username, is_moderator FROM examiners 
-                   WHERE username = ? AND password = ? AND status = 1`;
+                   WHERE username = ? AND password = ?`;
 
     db.get(query, [username, password], (err, user) => {
         if (err) {
@@ -389,18 +441,59 @@ app.post('/api/login', express.json(), (req, res) => {
         }
 
         if (user) {
-            const role = user.is_moderator ? 'moderator' : 'examiner';
-            
-            // Note: In a production app, you'd set the cookie here using res.cookie()
-            // with the 'httpOnly: true' flag to prevent XSS.
-            res.json({ 
-                success: true, 
-                role: role 
+            // 2. Set the examiner to Online (status = 1) immediately upon success
+            db.run(`UPDATE examiners SET status = 1 WHERE id = ?`, [user.id], (updateErr) => {
+                if (updateErr) {
+                    console.error("Failed to update status on login:", updateErr);
+                }
+                
+                const role = user.is_moderator ? 'moderator' : 'examiner';
+                
+                console.log(`Examiner ${username} logged in and is now ONLINE.`);
+
+                res.json({ 
+                    success: true, 
+                    role: role,
+                    username: user.username // Helpful for frontend to track who is live
+                });
             });
         } else {
             res.status(401).json({ success: false, message: "Invalid credentials" });
         }
     });
+});
+
+
+/**
+ * LOOPHOLE 4: ROUTING
+ */
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public/index.html'))); // Landing page
+app.get('/interview', (req, res) => res.sendFile(path.join(__dirname, 'public/portal.html'))); // Interview UI
+app.get('/gatekeeper', (req, res) => res.sendFile(path.join(__dirname, 'public/gatekeeper.html')));
+
+/**
+ * LOOPHOLE 1: SMTP MANAGEMENT API
+ */
+app.get('/api/mailer', (req, res) => {
+    db.all(`SELECT id, host, port, user, is_active FROM mailer_settings`, [], (err, rows) => res.json(rows));
+});
+
+app.post('/api/mailer', (req, res) => {
+    const { host, port, user, pass, from_email } = req.body;
+    db.run(`UPDATE mailer_settings SET is_active = 0`, [], () => {
+        db.run(`INSERT INTO mailer_settings (host, port, user, pass, from_email, is_active) VALUES (?, ?, ?, ?, ?, 1)`,
+            [host, port, user, pass, from_email], () => res.sendStatus(200));
+    });
+});
+
+app.delete('/api/mailer/:id', (req, res) => {
+    db.run(`DELETE FROM mailer_settings WHERE id = ?`, [req.params.id], () => res.sendStatus(200));
+});
+
+// Human Verification Endpoint
+app.post('/api/verify-human', (req, res) => {
+    res.cookie('verified_human', 'true', { maxAge: 3600000, httpOnly: true });
+    res.json({ success: true });
 });
 
 const PORT = process.env.PORT || 3000;

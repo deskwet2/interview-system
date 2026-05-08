@@ -48,11 +48,23 @@ const initDb = () => {
                 FOREIGN KEY (candidate_email) REFERENCES candidates (email)
             )`);
 
-            // 5. NEW: Examiners Table
+            // 6. Mailing Rcords Table
+            db.run(`CREATE TABLE IF NOT EXISTS mailer_settings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                host TEXT,
+                port INTEGER,
+                user TEXT,
+                pass TEXT,
+                from_email TEXT,
+                is_active INTEGER DEFAULT 0
+            )`);
+
+            // 6. NEW: Examiners Table
             db.run(`CREATE TABLE IF NOT EXISTS examiners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL,
+                email TEXT,
                 telegram_key TEXT,
                 chat_id TEXT,
                 status INTEGER DEFAULT 1,

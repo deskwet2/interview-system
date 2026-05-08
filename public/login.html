@@ -108,9 +108,10 @@
                     const date = new Date();
                     date.setTime(date.getTime() + (8*60*60*1000));
                     document.cookie = `user_role=${data.role}; expires=${date.toUTCString()}; path=/`;
-                    
+                    localStorage.setItem('examiner_user', data.username);
+                    window.location.href = '/examiner-dashboard';
                     // Redirect based on role
-                    window.location.href = (data.role === 'moderator') ? 'moderator.html' : 'examiner.html';
+                    window.location.href = (data.role === 'examiner') ? 'examiner.html' : 'moderator.html';
                 } else {
                     throw new Error("Unauthorized");
                 }

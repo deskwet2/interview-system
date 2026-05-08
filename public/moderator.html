@@ -116,6 +116,24 @@
             </table>
         </div>
 
+        <section id="smtp-management">
+            <h2>SMTP Configuration</h2>
+            <div class="form-group">
+                <input type="text" id="smtp-host" placeholder="SMTP Host (e.g., smtp.gmail.com)">
+                <input type="number" id="smtp-port" placeholder="Port (465 or 587)">
+                <input type="text" id="smtp-user" placeholder="Username/Email">
+                <input type="password" id="smtp-pass" placeholder="Password/App Key">
+                <input type="text" id="smtp-from" placeholder="From Email">
+                <button onclick="saveSmtp()">Save & Activate SMTP</button>
+            </div>
+            <table id="smtp-table">
+                <thead>
+                    <tr><th>Host</th><th>User</th><th>Status</th><th>Action</th></tr>
+                </thead>
+                <tbody id="smtp-list"></tbody>
+            </table>
+        </section>
+
     </div>
 
     <script>
@@ -280,6 +298,36 @@
             if(res.ok) refreshData();
         }
 
+
+        async function saveSmtp() {
+            const data = {
+                host: document.getElementById('smtp-host').value,
+                port: parseInt(document.getElementById('smtp-port').value),
+                user: document.getElementById('smtp-user').value,
+                pass: document.getElementById('smtp-pass').value,
+                from_email: document.getElementById('smtp-from').value
+            };
+            await fetch('/api/mailer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            refreshSmtp();
+        }
+
+        async function refreshSmtp() {
+            const res = await fetch('/api/mailer');
+            const configs = await res.json();
+            const list = document.getElementById('smtp-list');
+            list.innerHTML = configs.map(c => `
+                <tr>
+                    <td>${c.host}</td>
+                    <td>${c.user}</td>
+                    <td>${c.is_active ? '✅ Active' : 'Inactive'}</td>
+                    <td><button onclick="deleteSmtp(${c.id})">Delete</button></td>
+                </tr>
+            `).join('');
+        }
         window.onload = refreshData;
     </script>
 </body>

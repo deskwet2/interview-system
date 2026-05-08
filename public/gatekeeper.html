@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verification Required</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f7f6; margin: 0; }
+        .box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
+        button { background: #2c3e50; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #34495e; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Security Check</h2>
+        <p>Please click the button below to verify you are a human and access the interview portal.</p>
+        <button onclick="verify()">I am not a bot</button>
+    </div>
+    <script>
+        async function verify() {
+            const res = await fetch('/api/verify-human', { method: 'POST' });
+            if (res.ok) window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
