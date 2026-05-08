@@ -106,15 +106,21 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         if (socket.email) {
-            // FIX 2: Use a callback for the disconnect to ensure the emit happens 
-            // AFTER the database has successfully marked them offline
-            db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [socket.email], () => {
-                io.emit('candidate_offline', socket.email);
-                console.log(`Candidate ${socket.email} is now offline.`);
-            });
-            
-            // Clean up memory map
-            delete emailToSocket[socket.email];
+            const email = socket.email;
+
+            // Check if this specific socket is still the "active" one for this email
+            // If the user refreshed, emailToSocket[email] will already point to a NEW socket ID
+            if (emailToSocket[email] === socket.id) {
+                db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [email], () => {
+                    io.emit('candidate_offline', email);
+                    console.log(`Candidate ${email} is now offline.`);
+                    
+                    // Only delete from map if it's the current socket
+                    delete emailToSocket[email];
+                });
+            } else {
+                console.log(`Socket ${socket.id} closed, but ${email} has already reconnected on a new socket.`);
+            }
         }
     });
 

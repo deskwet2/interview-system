@@ -132,8 +132,8 @@
             const taskData = JSON.parse(savedTask);
             currentScreenFile = taskData.screenFile;
             renderScreen(taskData);
-        } else {
-            // Only show "Connecting" if it's a fresh start or no task was saved
+        } else if (!isRestore) { 
+            // ONLY show connecting screen if it's a brand new login
             document.getElementById('screen-target').innerHTML = `
                 <div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;">
                     <h3>Connecting to Interview Server...</h3>
