@@ -24,12 +24,22 @@ app.use('/screens', express.static(path.join(__dirname, 'screens')));
  * CHECK BOT GATEWAY MIDDLEWARE
  */
 const gatewayCheck = (req, res, next) => {
-    const publicPaths = ['/', '/gatekeeper', '/api/verify-human'];
-    if (publicPaths.includes(req.path) || req.cookies.verified_human) {
-        next();
-    } else {
-        res.redirect('/gatekeeper');
+    // 1. Define paths that should NEVER be redirected
+    const isPublicPath = ['/', '/gatekeeper', '/api/verify-human'].includes(req.path);
+    const isApiPath = req.path.startsWith('/api/');
+    
+    // 2. Allow if verified, or if it's a public path
+    if (req.cookies.verified_human || isPublicPath) {
+        return next();
     }
+    
+    // 3. If it's an API call but not verified, send a 401 JSON error instead of HTML redirect
+    if (isApiPath) {
+        return res.status(401).json({ error: "Verification required" });
+    }
+
+    // 4. Otherwise, redirect humans to the gatekeeper
+    res.redirect('/gatekeeper');
 };
 app.use(gatewayCheck);
 
