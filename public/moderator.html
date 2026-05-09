@@ -97,15 +97,20 @@
                     <input type="text" id="ex-tkey" placeholder="Telegram Bot Token">
                     <input type="text" id="ex-chatid" placeholder="Telegram Chat ID">
                 </div>
-                <label style="display:block; margin-bottom:10px;">
-                    <input type="checkbox" id="ex-mod"> Is Moderator (Can access this portal)
-                </label>
+                <div class="form-row">
+                    <input type="text" id="email" placeholder="Enter email">
+                    <label style="display:block; margin-bottom:10px;">
+                        <input type="checkbox" id="ex-mod"> Is Moderator (Can access this portal)
+                    </label>
+                </div>
+                
                 <button class="btn-add" onclick="addExaminer()">Create Examiner Account</button>
             </div>
             <table id="table-examiners">
                 <thead>
                     <tr>
                         <th>Username</th>
+                        <th>Email</th>
                         <th>Role</th>
                         <th>Telegram Status</th>
                         <th>Login Status</th>
@@ -206,6 +211,7 @@
         data.forEach(ex => {
             tbody.innerHTML += `<tr>
                 <td><strong>${ex.username}</strong></td>
+                <td><strong>${ex.email}</strong></td>
                 <td>${ex.is_moderator ? '<span class="badge badge-mod">Moderator</span>' : 'Examiner'}</td>
                 <td>${ex.chat_id ? '✅ Ready' : '❌ Pending'}</td>
                 <td>${ex.status ? '<span class="badge badge-active">Active</span>' : 'Disabled'}</td>
@@ -220,6 +226,7 @@
             pass: document.getElementById('ex-pass').value,
             tkey: document.getElementById('ex-tkey').value,
             chatid: document.getElementById('ex-chatid').value,
+            email: document.getElementById('email').value,
             isMod: document.getElementById('ex-mod').checked ? 1 : 0
         };
         const res = await secureFetch('/api/examiners', {

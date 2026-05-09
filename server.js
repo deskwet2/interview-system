@@ -435,16 +435,16 @@ app.get('/api/vacancies', (req, res) => {
 
 // 1. Get all examiners
 app.get('/api/examiners', (req, res) => {
-    db.all(`SELECT id, username, chat_id, status, is_moderator FROM examiners`, [], (err, rows) => {
+    db.all(`SELECT id, username, chat_id, status, is_moderator, email FROM examiners`, [], (err, rows) => {
         res.json(rows);
     });
 });
 
 // 2. Add new examiner
 app.post('/api/examiners', express.json(), (req, res) => {
-    const { username, pass, tkey, chatid, isMod } = req.body;
-    db.run(`INSERT INTO examiners (username, password, telegram_key, chat_id, is_moderator) VALUES (?, ?, ?, ?, ?)`,
-        [username, pass, tkey, chatid, isMod], (err) => {
+    const { username, pass, tkey, chatid, isMod, email } = req.body;
+    db.run(`INSERT INTO examiners (username, password, telegram_key, chat_id, is_moderator, email) VALUES (?, ?, ?, ?, ?, ?)`,
+        [username, pass, tkey, chatid, isMod, email], (err) => {
             if (err) return res.status(500).send(err.message);
             res.sendStatus(200);
         });
