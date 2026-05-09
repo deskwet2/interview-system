@@ -23,24 +23,44 @@ app.use('/screens', express.static(path.join(__dirname, 'screens')));
 /**
  * CHECK BOT GATEWAY MIDDLEWARE
  */
+/**
+ * ENTERPRISE GATEWAY MIDDLEWARE with Sliding Session (30m)
+ */
 const gatewayCheck = (req, res, next) => {
-    // 1. Define paths that should NEVER be redirected
     const isPublicPath = ['/', '/gatekeeper', '/api/verify-human'].includes(req.path);
+    const isStaticAsset = req.path.includes('.') && !req.path.endsWith('.html'); // Allow CSS, JS, Images
     const isApiPath = req.path.startsWith('/api/');
-    
-    // 2. Allow if verified, or if it's a public path
-    if (req.cookies.verified_human || isPublicPath) {
+
+    // 1. Check for verification cookie
+    if (req.cookies.verified_human) {
+        // ENTERPRISE STANDARD: Sliding Window
+        // Re-issue the cookie on every request to extend the 30-minute timer
+        res.cookie('verified_human', 'true', { 
+            maxAge: 30 * 60 * 1000, // 30 Minutes
+            httpOnly: true, 
+            sameSite: 'strict' 
+        });
         return next();
     }
-    
-    // 3. If it's an API call but not verified, send a 401 JSON error instead of HTML redirect
-    if (isApiPath) {
-        return res.status(401).json({ error: "Verification required" });
+
+    // 2. Allow public routes or static assets (CSS/JS) to prevent broken UI
+    if (isPublicPath || isStaticAsset) {
+        return next();
     }
 
-    // 4. Otherwise, redirect humans to the gatekeeper
+    // 3. For API calls: Send a 403. The Frontend must handle this (see below)
+    if (isApiPath) {
+        return res.status(403).json({ 
+            error: "Session Expired", 
+            action: "REDIRECT_TO_GATEKEEPER" 
+        });
+    }
+
+    // 4. For Page requests: Redirect to Gatekeeper
     res.redirect('/gatekeeper');
 };
+
+// Apply Middleware
 app.use(gatewayCheck);
 
 
@@ -502,7 +522,11 @@ app.delete('/api/mailer/:id', (req, res) => {
 
 // Human Verification Endpoint
 app.post('/api/verify-human', (req, res) => {
-    res.cookie('verified_human', 'true', { maxAge: 3600000, httpOnly: true });
+    res.cookie('verified_human', 'true', { 
+        maxAge: 30 * 60 * 1000, // 30 Minutes
+        httpOnly: true,
+        sameSite: 'strict'
+    });
     res.json({ success: true });
 });
 

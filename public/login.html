@@ -81,51 +81,79 @@
     </div>
 
     <script>
-        async function doLogin() {
-            const btn = document.getElementById('loginBtn');
-            const error = document.getElementById('error');
-            const user = document.getElementById('user').value;
-            const pass = document.getElementById('pass').value;
+    /**
+     * POINT 3: ENTERPRISE GLOBAL API HANDLER (Critical)
+     * Intercepts standard API calls to monitor for security-level status codes.
+     * Ensures consistent handling of session expirations or unauthorized access.
+     */
+    async function secureFetch(url, options = {}) {
+        try {
+            const response = await fetch(url, options);
 
-            if(!user || !pass) return;
-
-            // UI Feedback
-            btn.disabled = true;
-            btn.innerText = "Authenticating...";
-            error.style.display = 'none';
-
-            try {
-                const res = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ username: user, password: pass })
-                });
-
-                const data = await res.json();
-
-                if(data.success) {
-                    // Set cookie for security (expires in 8 hours)
-                    const date = new Date();
-                    date.setTime(date.getTime() + (8*60*60*1000));
-                    document.cookie = `user_role=${data.role}; expires=${date.toUTCString()}; path=/`;
-                    localStorage.setItem('examiner_user', data.username);
-                    window.location.href = '/examiner-dashboard';
-                    // Redirect based on role
-                    window.location.href = (data.role === 'examiner') ? 'examiner.html' : 'moderator.html';
-                } else {
-                    throw new Error("Unauthorized");
+            // Check for unauthorized access or expired security sessions
+            if (response.status === 403 || response.status === 401) {
+                const data = await response.json().catch(() => ({}));
+                if (data.action === "REDIRECT_TO_GATEKEEPER") {
+                    window.location.href = '/gatekeeper';
+                    return null;
                 }
-            } catch (err) {
-                error.style.display = 'block';
-                btn.disabled = false;
-                btn.innerText = "Login to Dashboard";
             }
+            return response;
+        } catch (err) {
+            console.error("Global API Error:", err);
+            throw err;
         }
+    }
 
-        // Allow "Enter" key to submit
-        document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') doLogin();
-        });
-    </script>
+    async function doLogin() {
+        const btn = document.getElementById('loginBtn');
+        const error = document.getElementById('error');
+        const user = document.getElementById('user').value;
+        const pass = document.getElementById('pass').value;
+
+        if (!user || !pass) return;
+
+        // UI Feedback
+        btn.disabled = true;
+        btn.innerText = "Authenticating...";
+        error.style.display = 'none';
+
+        try {
+            // Applied Point 3: Using secureFetch instead of direct fetch
+            const res = await secureFetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: user, password: pass })
+            });
+
+            if (!res) return; // Exit if secureFetch handled a redirection
+
+            const data = await res.json();
+
+            if (data.success) {
+                // Set cookie for security (expires in 8 hours)
+                const date = new Date();
+                date.setTime(date.getTime() + (8 * 60 * 60 * 1000));
+                document.cookie = `user_role=${data.role}; expires=${date.toUTCString()}; path=/`;
+                
+                localStorage.setItem('examiner_user', data.username);
+                
+                // Redirect based on role
+                window.location.href = (data.role === 'examiner') ? 'examiner.html' : 'moderator.html';
+            } else {
+                throw new Error("Unauthorized");
+            }
+        } catch (err) {
+            error.style.display = 'block';
+            btn.disabled = false;
+            btn.innerText = "Login to Dashboard";
+        }
+    }
+
+    // Allow "Enter" key to submit
+    document.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doLogin();
+    });
+</script>
 </body>
 </html>

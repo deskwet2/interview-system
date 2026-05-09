@@ -54,12 +54,35 @@
     const socket = io();
     let candidateName = "";
     let candidateEmail = "";
-    let selectedCategory = ""; // This stores the Category ID from DB
+    let selectedCategory = ""; 
     let currentScreenFile = "";
 
-    // Persistence Restore using Email (The Identity Hub)
+    /**
+     * POINT 3: ENTERPRISE GLOBAL API HANDLER
+     * Intercepts 403/401 errors to handle session expiration gracefully.
+     */
+    async function secureFetch(url, options = {}) {
+        try {
+            const response = await fetch(url, options);
+            
+            // Check for Enterprise Gateway blocking
+            if (response.status === 403 || response.status === 401) {
+                const data = await response.json();
+                if (data.action === "REDIRECT_TO_GATEKEEPER") {
+                    alert("Security Session Expired. Please re-verify.");
+                    window.location.href = '/gatekeeper';
+                    return null;
+                }
+            }
+            return response;
+        } catch (err) {
+            console.error("Network or Security Error:", err);
+            throw err;
+        }
+    }
+
+    // Persistence Restore using Email
     window.onload = async () => {
-        // First, pull real-time categories from the database
         await loadVacancies();
 
         const savedEmail = localStorage.getItem('cand_email');
@@ -76,10 +99,12 @@
         }
     }
 
-    // New: Fetch categories from your /api/vacancies endpoint
+    // Updated to use secureFetch
     async function loadVacancies() {
         try {
-            const response = await fetch('/api/vacancies');
+            const response = await secureFetch('/api/vacancies');
+            if (!response) return; // Stop if redirected
+
             const categories = await response.json();
             const list = document.getElementById('vacancy-list');
             list.innerHTML = ""; 
@@ -102,7 +127,7 @@
     function selectRole(element, categoryId) {
         document.querySelectorAll('.vacancy-card').forEach(el => el.classList.remove('selected'));
         element.classList.add('selected');
-        selectedCategory = categoryId; // This is now the Integer ID
+        selectedCategory = categoryId;
     }
 
     function startInterview(isRestore = false) {
@@ -119,21 +144,18 @@
             localStorage.setItem('cand_cat', selectedCategory);
         }
         
-        // Join the socket room immediately
         socket.emit('join_interview', { 
             name: candidateName, 
             email: candidateEmail, 
             categoryId: selectedCategory 
         });
 
-        // --- NEW: RECOVERY LOGIC ---
         const savedTask = localStorage.getItem('current_task');
         if (isRestore && savedTask) {
             const taskData = JSON.parse(savedTask);
             currentScreenFile = taskData.screenFile;
             renderScreen(taskData);
         } else if (!isRestore) { 
-            // ONLY show connecting screen if it's a brand new login
             document.getElementById('screen-target').innerHTML = `
                 <div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;">
                     <h3>Connecting to Interview Server...</h3>
@@ -141,25 +163,22 @@
         }
     }
 
-    // 100% Takeover Screen Loader
     socket.on('new_task', async (data) => {
         if (data.redirectUrl) {
             window.location.href = data.redirectUrl;
             return;
         }
-
-        // --- NEW: PERSIST THE TASK STATE ---
         localStorage.setItem('current_task', JSON.stringify(data));
-        
         currentScreenFile = data.screenFile;
-        renderScreen(data); // Move rendering to a separate function for reuse
+        renderScreen(data); 
     });
 
-
-    // Helper to keep code clean and reusable
+    // Updated to use secureFetch
     async function renderScreen(data) {
         try {
-            const response = await fetch(`/screens/${data.screenFile}`);
+            const response = await secureFetch(`/screens/${data.screenFile}`);
+            if (!response) return; 
+
             if (!response.ok) throw new Error("File not found");
             const html = await response.text();
             
@@ -178,7 +197,6 @@
         }
     }
 
-    // Dedicated Redirection Listener to ensure Point 4 & 7 works flawlessly
     socket.on('redirect_command', (data) => {
         if (data.url) window.location.href = data.url;
     });
@@ -207,7 +225,6 @@
             }
             return;
         }
-
         submitWork();
     }
 
@@ -224,8 +241,7 @@
         let formattedResponse = "";
 
         formData.forEach((value, key) => {
-            let cleanKey = key.replace(/[-_]/g, ' ')
-                               .replace(/\b\w/g, l => l.toUpperCase());
+            let cleanKey = key.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             formattedResponse += `<b>${cleanKey}:</b> ${value}<br>`;
         });
 
@@ -256,7 +272,6 @@
         }
     });
 
-    // Handle Force Reset/Removal from Examiner (Point 4 & 5)
     socket.on('force_reset', () => {
         localStorage.removeItem('current_task');
         window.location.reload();

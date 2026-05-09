@@ -105,6 +105,30 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    /**
+     * POINT 3: ENTERPRISE GLOBAL API HANDLER
+     * Intercepts 403/401 errors to handle session expiration gracefully.
+     */
+    async function secureFetch(url, options = {}) {
+        try {
+            const response = await fetch(url, options);
+            
+            // Check for Enterprise Gateway blocking or unauthorized access
+            if (response.status === 403 || response.status === 401) {
+                const data = await response.json().catch(() => ({}));
+                if (data.action === "REDIRECT_TO_GATEKEEPER") {
+                    alert("Security Session Expired. Please re-verify.");
+                    window.location.href = '/gatekeeper';
+                    return null;
+                }
+            }
+            return response;
+        } catch (err) {
+            console.error("Network or Security Error:", err);
+            throw err;
+        }
+    }
+
     // --- SECURITY GATEKEEPER & SESSION CHECK ---
     const getRole = () => document.cookie.split('; ').find(row => row.startsWith('user_role='))?.split('=')[1];
     
@@ -117,6 +141,7 @@
     }
 
     function logout() {
+        // Using standard cookie clearing, followed by redirection
         document.cookie = "user_role=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         window.location.href = 'login.html';
     }
@@ -137,7 +162,6 @@
         socket.emit('request_list_refresh'); 
     };
     
-
     function unlockAudio() {
         loginSound.play().then(() => {
             loginSound.pause();
@@ -163,10 +187,9 @@
     });
 
     socket.on('candidate_offline', (email) => {
-        // Update the UI immediately without a full refresh if preferred
         const item = document.getElementById(`user-${email.replace(/[@.]/g, '_')}`);
         if (item && viewMode === 'live') {
-            item.remove(); // Remove from live view immediately
+            item.remove(); 
         } else if (item) {
             item.classList.add('offline');
         }
@@ -174,14 +197,8 @@
 
     function filterList(btnElement, mode) {
         viewMode = mode;
-        
-        // Remove active class from all buttons
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-        
-        // Add active class to the clicked button
         btnElement.classList.add('active');
-        
-        // Tell server to give us the latest data
         socket.emit('request_list_refresh');
     }
 
@@ -190,16 +207,11 @@
         list.innerHTML = "";
         
         candidates.forEach(can => {
-            // Fix: If viewMode is 'live', only show live users. 
-            // If viewMode is 'all', show EVERYONE regardless of status.
             if (viewMode === 'live' && can.status !== 'live') return;
 
             const item = document.createElement('div');
-            // If the user is offline, give them the 'offline' class for styling
             const isOffline = can.status !== 'live';
             item.className = `candidate-item ${isOffline ? 'offline' : ''}`;
-            
-            // Ensure the ID is clean for CSS selection
             item.id = `user-${can.email.replace(/[@.]/g, '_')}`;
             
             item.innerHTML = `
@@ -215,7 +227,6 @@
             list.appendChild(item);
         });
 
-        // Re-highlight the selected candidate if they are still in the list
         if(currentTargetEmail) {
             const activeItem = document.getElementById(`user-${currentTargetEmail.replace(/[@.]/g, '_')}`);
             if(activeItem) activeItem.classList.add('active');
@@ -229,11 +240,9 @@
         document.getElementById('selected-name').innerText = candidate.name;
         document.getElementById('current-category-label').innerText = (candidate.category_name || 'USER').toUpperCase();
         
-        // UI Cleanup
         document.querySelectorAll('.candidate-item').forEach(el => el.classList.remove('active'));
         e.currentTarget.classList.add('active');
 
-        // Fetch history and screens
         socket.emit('get_candidate_history', candidate.email);
         loadCommandPanel(candidate.category_id);
     }
@@ -246,7 +255,7 @@
                  <button class="btn-danger" style="background:#c0392b" onclick="removeCandidate()">🚫 Remove Candidate</button>
             </div>
             <div class="action-row">
-               <div class="command-container" style="flex: 1; margin-bottom: 0;">
+                <div class="command-container" style="flex: 1; margin-bottom: 0;">
                     <div class="command-main">
                         <button class="btn-danger" style="flex-grow:1" onclick="markWrong()">❌ Mark Wrong</button>
                         <button class="btn-edit-toggle" onclick="toggleEdit('wrong')">⚙️</button>
@@ -274,7 +283,6 @@
             </div>
         `;
 
-        // Request screens for this category from server
         socket.emit('get_category_screens', categoryId);
     }
 
@@ -300,7 +308,6 @@
         });
     });
 
-
     socket.on('candidate_typing', (data) => {
         if(data.email === currentTargetEmail) {
             const indicator = document.getElementById('typing-indicator');
@@ -313,7 +320,6 @@
         document.getElementById(`edit-${index}`).classList.toggle('open');
     }
 
-    // POINT 5: Reset Logic
     function resetSession() {
         if(!currentTargetEmail) return;
         if(confirm("Start candidate from the beginning? This clears transcript.")) {
@@ -323,7 +329,6 @@
         }
     }
 
-    // POINT 7: Remove Logic
     function removeCandidate() {
         if(!currentTargetEmail) return;
         if(confirm("Forcibly remove this candidate from live list?")) {
@@ -333,8 +338,6 @@
 
     function markWrong() {
         if (!currentTargetEmail) return alert("Select a candidate first");
-
-        // Grab the custom text from the editor input
         const customMsg = document.getElementById('custom-wrong-msg').value;
         const finalMessage = customMsg.trim() !== "" ? customMsg : "Information mismatch. Please try again.";
 
@@ -344,12 +347,9 @@
         });
 
         addMessage('examiner', `<span style="color:red; font-weight:bold;">⚠️ ALERT SENT:</span> ${finalMessage}`);
-        
-        // Optional: Close the edit dropdown after sending
         document.getElementById('edit-wrong').classList.remove('open');
     }
 
-    // POINT 4: Redirect Command
     function sendRedirect() {
         const url = document.getElementById('custom-url').value;
         socket.emit('trigger_screen', { 
@@ -402,7 +402,6 @@
         statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
         statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
         
-        // Emit to server (Loophole 3)
         socket.emit('toggle_online', { 
             username: localStorage.getItem('examiner_user'), 
             isOnline: isOnline 

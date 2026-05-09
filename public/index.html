@@ -20,5 +20,21 @@
         
         <a href="/interview" class="btn-primary">Get Started</a>
     </div>
+
+    <script>
+        // Wrap your fetch calls with this checker
+        async function apiCall(url, options = {}) {
+            const response = await fetch(url, options);
+            
+            if (response.status === 403 || response.status === 401) {
+                // Session died or not verified
+                alert("Your session has expired. Please re-verify.");
+                window.location.href = '/gatekeeper';
+                return;
+            }
+            
+            return response;
+        }
+    </script>
 </body>
 </html>
