@@ -445,7 +445,12 @@ app.post('/api/examiners', express.json(), (req, res) => {
     const { username, pass, tkey, chatid, isMod, email } = req.body;
     db.run(`INSERT INTO examiners (username, password, telegram_key, chat_id, is_moderator, email) VALUES (?, ?, ?, ?, ?, ?)`,
         [username, pass, tkey, chatid, isMod, email], (err) => {
-            if (err) return res.status(500).send(err.message);
+            if (err) {
+                if (err.message.includes("UNIQUE constraint failed")) {
+                    return res.status(400).send("Error: This username is already taken.");
+                }
+                return res.status(500).send("Database error occurred.");
+            }
             res.sendStatus(200);
         });
 });
