@@ -1,24 +1,235 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Verification Required</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enterprise Security Verification</title>
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f7f6; margin: 0; }
-        .box { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; max-width: 400px; }
-        button { background: #2c3e50; color: white; border: none; padding: 12px 25px; border-radius: 4px; cursor: pointer; font-size: 16px; transition: 0.3s; }
-        button:hover { background: #34495e; }
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f8f9fa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .verification-container {
+            background: white;
+            padding: 50px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+            border: 1px solid #eee;
+        }
+
+        .logo {
+            font-weight: 700;
+            font-size: 24px;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        h2 { margin: 0 0 15px 0; font-size: 20px; color: #444; }
+        p { color: #777; font-size: 14px; line-height: 1.6; margin-bottom: 35px; }
+
+        /* Slider Security Component */
+        .slider-track {
+            position: relative;
+            width: 100%;
+            height: 50px;
+            background: #e9ecef;
+            border-radius: 25px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        .slider-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            color: #999;
+            user-select: none;
+            z-index: 1;
+        }
+
+        .slider-handle {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            border-radius: 25px;
+            cursor: grab;
+            z-index: 2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .slider-handle:active { cursor: grabbing; }
+
+        .slider-handle i {
+            width: 12px;
+            height: 12px;
+            border-top: 3px solid white;
+            border-right: 3px solid white;
+            transform: rotate(45deg);
+            margin-left: -4px;
+        }
+
+        .slider-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 0;
+            background: var(--accent-color);
+            z-index: 1;
+        }
+
+        .success-overlay {
+            display: none;
+            color: #27ae60;
+            font-weight: 600;
+            margin-top: 20px;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .verifying { animation: pulse 1s infinite; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>Security Check</h2>
-        <p>Please click the button below to verify you are a human and access the interview portal.</p>
-        <button onclick="verify()">I am not a bot</button>
+
+    <div class="verification-container">
+        <div class="logo">SecureGate</div>
+        <h2>System Verification</h2>
+        <p>To protect our enterprise resources, please slide the arrow to the right to verify your identity.</p>
+
+        <div class="slider-track" id="track">
+            <div class="slider-text">Slide to Verify</div>
+            <div class="slider-progress" id="progress"></div>
+            <div class="slider-handle" id="handle">
+                <i></i>
+            </div>
+        </div>
+
+        <div id="status" class="success-overlay">
+            Verification Successful. Redirecting...
+        </div>
     </div>
+
     <script>
+        const handle = document.getElementById('handle');
+        const track = document.getElementById('track');
+        const progress = document.getElementById('progress');
+        const status = document.getElementById('status');
+
+        let isDragging = false;
+        let startX = 0;
+        const maxSlide = track.offsetWidth - handle.offsetWidth;
+
+        // Interaction Listeners
+        handle.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', onDrag);
+        window.addEventListener('mouseup', stopDrag);
+
+        handle.addEventListener('touchstart', (e) => startDrag(e.touches[0]));
+        window.addEventListener('touchmove', (e) => onDrag(e.touches[0]));
+        window.addEventListener('touchend', stopDrag);
+
+        function startDrag(e) {
+            isDragging = true;
+            startX = e.clientX - handle.offsetLeft;
+            handle.style.transition = 'none';
+            progress.style.transition = 'none';
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+
+            let x = e.clientX - startX;
+            
+            // Constraints
+            if (x < 0) x = 0;
+            if (x > maxSlide) x = maxSlide;
+
+            handle.style.left = x + 'px';
+            progress.style.width = (x + 25) + 'px';
+
+            // Check if reached end
+            if (x >= maxSlide - 2) {
+                isDragging = false;
+                onSuccess();
+            }
+        }
+
+        function stopDrag() {
+            if (!isDragging) return;
+            isDragging = false;
+            
+            // Snap back if not completed
+            handle.style.transition = 'left 0.3s ease';
+            progress.style.transition = 'width 0.3s ease';
+            handle.style.left = '0px';
+            progress.style.width = '0px';
+        }
+
+        function onSuccess() {
+            handle.style.left = maxSlide + 'px';
+            progress.style.width = '100%';
+            handle.style.background = '#27ae60';
+            handle.innerHTML = '✓';
+            handle.style.cursor = 'default';
+            
+            document.querySelector('.slider-text').innerText = 'Verified';
+            document.querySelector('.slider-text').classList.add('verifying');
+            
+            verify();
+        }
+
         async function verify() {
-            const res = await fetch('/api/verify-human', { method: 'POST' });
-            if (res.ok) window.location.href = '/';
+            try {
+                const res = await fetch('/api/verify-human', { method: 'POST' });
+                const data = await res.json();
+                
+                if (data.success) {
+                    status.style.display = 'block';
+                    // Redirect to the original page they tried to visit
+                    setTimeout(() => {
+                        window.location.href = data.redirectTo;
+                    }, 800);
+                } else {
+                    alert("Verification failed. Please refresh.");
+                    window.location.reload();
+                }
+            } catch (err) {
+                console.error("Verification Error:", err);
+            }
         }
     </script>
 </body>

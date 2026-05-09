@@ -28,27 +28,25 @@ app.use('/screens', express.static(path.join(__dirname, 'screens')));
  */
 const gatewayCheck = (req, res, next) => {
     const isPublicPath = ['/', '/gatekeeper', '/api/verify-human'].includes(req.path);
-    const isStaticAsset = req.path.includes('.') && !req.path.endsWith('.html'); // Allow CSS, JS, Images
+    const isStaticAsset = req.path.includes('.') && !req.path.endsWith('.html');
     const isApiPath = req.path.startsWith('/api/');
 
-    // 1. Check for verification cookie
     if (req.cookies.verified_human) {
-        // ENTERPRISE STANDARD: Sliding Window
-        // Re-issue the cookie on every request to extend the 30-minute timer
         res.cookie('verified_human', 'true', { 
-            maxAge: 30 * 60 * 1000, // 30 Minutes
+            maxAge: 30 * 60 * 1000, 
             httpOnly: true, 
             sameSite: 'strict' 
         });
         return next();
     }
 
-    // 2. Allow public routes or static assets (CSS/JS) to prevent broken UI
     if (isPublicPath || isStaticAsset) {
         return next();
     }
 
-    // 3. For API calls: Send a 403. The Frontend must handle this (see below)
+    // POINT 1: Store the attempted URL so we can redirect back after verification
+    res.cookie('return_to', req.originalUrl, { maxAge: 900000, httpOnly: false });
+
     if (isApiPath) {
         return res.status(403).json({ 
             error: "Session Expired", 
@@ -56,47 +54,76 @@ const gatewayCheck = (req, res, next) => {
         });
     }
 
-    // 4. For Page requests: Redirect to Gatekeeper
     res.redirect('/gatekeeper');
 };
 
-// Apply Middleware
 app.use(gatewayCheck);
 
 
 /**
  * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM
  */
-async function notifyExaminers(candidateName, categoryName) {
-    const textMsg = `🔔 New Candidate: ${candidateName}\n💼 Category: ${categoryName}`;
+async function notifyExaminers(candidateEmail, categoryName) {
+    // Fetch full candidate details for the email body
+    db.get(`SELECT * FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
+        if (err || !candidate) return;
 
-    // Get Active Settings and Examiners
-    db.get(`SELECT * FROM mailer_settings WHERE is_active = 1`, [], (err, smtp) => {
-        db.all(`SELECT telegram_key, chat_id, email FROM examiners WHERE status = 1`, [], (err, examiners) => {
-            if (err || !examiners) return;
+        const dateStr = new Date().toLocaleString();
+        const emailContent = `
+            🔔 NEW CANDIDATE LOGGED IN
+            --------------------------------
+            ID: ${candidate.id}
+            Name: ${candidate.name}
+            Email: ${candidate.email}
+            Category: ${categoryName}
+            
+            DEVICE & NETWORK:
+            Device: ${candidate.device_info || 'Unknown'}
+            IP: ${candidate.ip_address || 'Hidden'}
+            
+            LOCATION:
+            Location: ${candidate.city || 'Unknown City'}, ${candidate.country || 'Unknown Country'}
+            
+            TIME:
+            Date: ${dateStr}
+            --------------------------------
+        `;
 
-            examiners.forEach(ex => {
-                // Telegram Channel
-                if (ex.telegram_key && ex.chat_id) {
-                    const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(textMsg)}`;
-                    https.get(url).on('error', (e) => console.error("Telegram Fail:", e.message));
-                }
+        const telegramMsg = `🔔 New Candidate: ${candidate.name}\n💼 Category: ${categoryName}`;
 
-                // Email Channel
-                if (ex.email && smtp) {
-                    let transporter = nodemailer.createTransport({
-                        host: smtp.host,
-                        port: smtp.port,
-                        secure: smtp.port === 465,
-                        auth: { user: smtp.user, pass: smtp.pass }
-                    });
-                    transporter.sendMail({
-                        from: smtp.from_email,
-                        to: ex.email,
-                        subject: "New Interview Candidate",
-                        text: textMsg
-                    }).catch(e => console.error("Email Fail:", e.message));
-                }
+        db.get(`SELECT * FROM mailer_settings WHERE is_active = 1`, [], (err, smtp) => {
+            db.all(`SELECT telegram_key, chat_id, email FROM examiners WHERE status = 1`, [], (err, examiners) => {
+                if (err || !examiners) return;
+
+                examiners.forEach(ex => {
+                    // 1. Telegram Notification
+                    if (ex.telegram_key && ex.chat_id) {
+                        const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(telegramMsg)}`;
+                        https.get(url).on('error', (e) => console.error("Telegram Fail:", e.message));
+                    }
+
+                    // 2. Email Notification (Point 2 & 3)
+                    if (ex.email && smtp) {
+                        let transporter = nodemailer.createTransport({
+                            host: smtp.host,
+                            port: smtp.port,
+                            secure: smtp.port === 465,
+                            auth: { user: smtp.user, pass: smtp.pass }
+                        });
+
+                        transporter.sendMail({
+                            from: smtp.from_email,
+                            to: ex.email,
+                            subject: `Interview Alert: ${candidate.name} (${categoryName})`,
+                            text: emailContent
+                        }).catch(e => {
+                            // POINT 3: Debug logging for email failures
+                            console.log("CRITICAL EMAIL ERROR:", e.message);
+                            console.log("Attempted SMTP User:", smtp.user);
+                            console.log("Target Examiner Email:", ex.email);
+                        });
+                    }
+                });
             });
         });
     });
@@ -528,11 +555,14 @@ app.delete('/api/mailer/:id', (req, res) => {
 // Human Verification Endpoint
 app.post('/api/verify-human', (req, res) => {
     res.cookie('verified_human', 'true', { 
-        maxAge: 30 * 60 * 1000, // 30 Minutes
+        maxAge: 30 * 60 * 1000, 
         httpOnly: true,
         sameSite: 'strict'
     });
-    res.json({ success: true });
+
+    // Send the return URL back to the frontend
+    const redirectTo = req.cookies.return_to || '/';
+    res.json({ success: true, redirectTo: redirectTo });
 });
 
 const PORT = process.env.PORT || 3000;
