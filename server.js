@@ -134,6 +134,7 @@ async function notifyExaminers(candidateEmail, categoryName, attemptCount = 1) {
 // Memory Map to link Email to the current Active Socket
 let emailToSocket = {};
 let joinAttempts = {};
+const examinerSockets = {};
 
 io.on('connection', (socket) => {
     
@@ -249,30 +250,42 @@ io.on('connection', (socket) => {
 
 
     // LOOPHOLE 3: Examiner Status Toggle
-    socket.on('toggle_online', (data) => {
-        const status = data.isOnline ? 1 : 0;
-        db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [status, data.username]);
+   socket.on('toggle_online', (data) => {
+        const { username, isOnline } = data;
+        const status = isOnline ? 1 : 0;
+        
+        // Save mapping for disconnect event
+        if (isOnline) {
+            examinerSockets[socket.id] = username;
+        }
+
+        db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [status, username], (err) => {
+            console.log(`Examiner ${username} is now ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
+        });
     });
 
 
 
     socket.on('disconnect', () => {
+        // 1. Candidate Disconnect (Existing)
         if (socket.email) {
             const email = socket.email;
-
-            // Check if this specific socket is still the "active" one for this email
-            // If the user refreshed, emailToSocket[email] will already point to a NEW socket ID
             if (emailToSocket[email] === socket.id) {
                 db.run(`UPDATE candidates SET status = 'offline' WHERE email = ?`, [email], () => {
                     io.emit('candidate_offline', email);
-                    console.log(`Candidate ${email} is now offline.`);
-                    
-                    // Only delete from map if it's the current socket
                     delete emailToSocket[email];
                 });
             }
+        }
 
-            db.run(`UPDATE examiners SET status = 0 WHERE socket_id = ?`, [socket.id]);
+        // 2. Examiner Disconnect (Auto-Offline)
+        // If this socket belonged to an examiner, take them offline in the DB
+        const exUsername = examinerSockets[socket.id];
+        if (exUsername) {
+            db.run(`UPDATE examiners SET status = 0 WHERE username = ?`, [exUsername], () => {
+                console.log(`Examiner ${exUsername} disconnected and forced OFFLINE.`);
+                delete examinerSockets[socket.id];
+            });
         }
     });
 
@@ -535,32 +548,19 @@ app.delete('/api/examiners/:id', (req, res) => {
 // 4. LOGIN ENDPOINT (Critical for security)
 app.post('/api/login', express.json(), (req, res) => {
     const { username, password } = req.body;
-    
-    // 1. Remove "AND status = 1" from the query to allow login even if currently offline
-    const query = `SELECT id, username, is_moderator FROM examiners 
-                   WHERE username = ? AND password = ?`;
+    const query = `SELECT id, username, is_moderator FROM examiners WHERE username = ? AND password = ?`;
 
     db.get(query, [username, password], (err, user) => {
-        if (err) {
-            return res.status(500).json({ success: false, message: "Server error" });
-        }
+        if (err) return res.status(500).json({ success: false, message: "Server error" });
 
         if (user) {
-            // 2. Set the examiner to Online (status = 1) immediately upon success
-            db.run(`UPDATE examiners SET status = 1 WHERE id = ?`, [user.id], (updateErr) => {
-                if (updateErr) {
-                    console.error("Failed to update status on login:", updateErr);
-                }
-                
-                const role = user.is_moderator ? 'moderator' : 'examiner';
-                
-                console.log(`Examiner ${username} logged in and is now ONLINE.`);
-
-                res.json({ 
-                    success: true, 
-                    role: role,
-                    username: user.username // Helpful for frontend to track who is live
-                });
+            // REMOVED: Automatic status = 1 update. 
+            // We only send back the user info; they start "Offline" by default.
+            const role = user.is_moderator ? 'moderator' : 'examiner';
+            res.json({ 
+                success: true, 
+                role: role,
+                username: user.username 
             });
         } else {
             res.status(401).json({ success: false, message: "Invalid credentials" });

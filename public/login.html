@@ -84,7 +84,6 @@
     /**
      * POINT 3: ENTERPRISE GLOBAL API HANDLER (Critical)
      * Intercepts standard API calls to monitor for security-level status codes.
-     * Ensures consistent handling of session expirations or unauthorized access.
      */
     async function secureFetch(url, options = {}) {
         try {
@@ -119,28 +118,38 @@
         error.style.display = 'none';
 
         try {
-            // Applied Point 3: Using secureFetch instead of direct fetch
             const res = await secureFetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: user, password: pass })
             });
 
-            if (!res) return; // Exit if secureFetch handled a redirection
+            if (!res) return; 
 
             const data = await res.json();
 
             if (data.success) {
-                // Set cookie for security (expires in 8 hours)
+                // 1. Set role-based cookie (expires in 8 hours)
                 const date = new Date();
                 date.setTime(date.getTime() + (8 * 60 * 60 * 1000));
                 document.cookie = `user_role=${data.role}; expires=${date.toUTCString()}; path=/`;
                 
+                // 2. CRITICAL: Store username for Socket Toggle logic
+                // This allows the dashboard to know which database record to update
                 localStorage.setItem('examiner_user', data.username);
                 
-                // Redirect based on role
-                window.location.href = (data.role === 'examiner') ? 'examiner.html' : 'moderator.html';
+                console.log(`Login successful for: ${data.username}`);
+
+                // 3. Redirect based on role
+                // Note: Ensure your filenames match (e.g., examiner.html or dashboard.html)
+                if (data.role === 'moderator') {
+                    window.location.href = 'moderator.html';
+                } else {
+                    window.location.href = 'examiner.html';
+                }
             } else {
+                // Handle incorrect credentials message from server
+                error.innerText = data.message || "Invalid Username or Password";
                 throw new Error("Unauthorized");
             }
         } catch (err) {
@@ -150,7 +159,7 @@
         }
     }
 
-    // Allow "Enter" key to submit
+    // Allow "Enter" key to submit from any input field
     document.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') doLogin();
     });

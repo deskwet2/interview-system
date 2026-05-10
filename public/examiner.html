@@ -398,15 +398,42 @@
     }
 
     function updatePresence(isOnline) {
+        const username = localStorage.getItem('examiner_user');
+        if (!username) {
+            alert("Session error. Please log in again.");
+            return logout();
+        }
+
         const statusText = document.getElementById('presence-status');
         statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
         statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
         
         socket.emit('toggle_online', { 
-            username: localStorage.getItem('examiner_user'), 
+            username: username, 
             isOnline: isOnline 
         });
     }
+
+    let idleTimer;
+    function resetIdleTimer() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            console.log("Idle for 30 mins. Going offline.");
+            const toggle = document.getElementById('live-toggle');
+            if (toggle.checked) {
+                toggle.checked = false;
+                updatePresence(false);
+                alert("You have been set to Offline due to inactivity.");
+            }
+        }, 30 * 60 * 1000); // 30 minutes
+    }
+
+    // Listen for activity
+    window.onload = resetIdleTimer;
+    window.onmousemove = resetIdleTimer;
+    window.onmousedown = resetIdleTimer;
+    window.onclick = resetIdleTimer;
+    window.onkeypress = resetIdleTimer;
 </script>
 </body>
 </html>
