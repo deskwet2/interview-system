@@ -281,6 +281,22 @@
         localStorage.clear();
         window.location.reload();
     });
+
+    socket.on('join_failed', (data) => {
+        console.warn("Join failed:", data.message);
+        
+        // 1. Show the error to the candidate
+        alert(`${data.message} (Attempt ${data.attempt}/3)`);
+
+        // 2. Clear the "loading" or "default" screen
+        // If you are using a Single Page App style, show the login form again:
+        document.getElementById('entrance-form').style.display = 'block';
+        document.getElementById('waiting-screen').style.display = 'none';
+
+        // 3. Reset local variables so they have to type/select again if necessary
+        // This forces the "redo the entrance" behavior you requested.
+        console.log("Candidate must now manually re-enter details and click Join.");
+    });
 </script>
 </body>
 </html>

