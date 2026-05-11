@@ -178,6 +178,12 @@
         
         // Update the checkbox state (status 1 = checked)
         const isOnline = data.status === 1;
+
+        if(isOnline){
+            console.log('Examiner online')
+        }else{
+            console.log('Examiner offline')
+        }
         toggle.checked = isOnline;
         
         // Update the text and color
