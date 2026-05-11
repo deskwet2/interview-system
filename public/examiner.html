@@ -158,37 +158,42 @@
     // These will eventually be fetched from the DB (Phase 2/3)
     let taskLibrary = []; 
 
-    window.onload = () => { 
-        // 1. Refresh the candidate list
+    // --- CONSOLIDATED STARTUP LOGIC ---
+    window.addEventListener('load', () => {
+        console.log("Dashboard loaded. Syncing state...");
+        
+        // 1. Refresh candidate list
         socket.emit('request_list_refresh'); 
         
-        // 2. Request current examiner status from DB to sync the toggle
+        // 2. Sync Toggle Status
         const username = localStorage.getItem('examiner_user');
         if (username) {
+            console.log("Requesting status for:", username);
             socket.emit('get_examiner_status', username);
+        } else {
+            console.warn("No username found in localStorage");
         }
         
         // 3. Initialize idle timer
         resetIdleTimer();
-    };
+    });
 
+    // Use a dedicated listener for the status sync
     socket.on('receive_examiner_status', (data) => {
+        console.log("Received status from server:", data);
         const toggle = document.getElementById('live-toggle');
         const statusText = document.getElementById('presence-status');
         
-        // Update the checkbox state (status 1 = checked)
-        const isOnline = data.status === 1;
+        if (!toggle || !statusText) return;
 
-        if(isOnline){
-            console.log('Examiner online')
-        }else{
-            console.log('Examiner offline')
-        }
-        toggle.checked = isOnline;
+        const isOnline = (data.status === 1 || data.status === true);
         
-        // Update the text and color
+        // Force UI update
+        toggle.checked = isOnline;
         statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
         statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
+        
+        console.log(isOnline ? 'UI Set: Online' : 'UI Set: Offline');
     });
     
     function unlockAudio() {

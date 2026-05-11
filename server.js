@@ -427,9 +427,14 @@ io.on('connection', (socket) => {
 
     socket.on('get_examiner_status', (username) => {
         db.get(`SELECT status FROM examiners WHERE username = ?`, [username], (err, row) => {
-            if (row) {
-                socket.emit('receive_examiner_status', { status: row.status });
+            if (err) {
+                console.error("DB Error:", err);
+                return;
             }
+            // Use socket.emit to send ONLY to the person who just refreshed
+            socket.emit('receive_examiner_status', { 
+                status: row ? row.status : 0 
+            });
         });
     });
 });
