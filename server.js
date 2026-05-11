@@ -61,81 +61,84 @@ app.use(gatewayCheck);
 
 
 /**
- * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM
+ * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM (UNIFIED)
  */
 async function notifyExaminers(candidateEmail, categoryName, attemptCount = 1) {
     console.log(`[DEBUG] Starting notification broadcast for ${candidateEmail} (Attempt: ${attemptCount})`);
 
-    // Fetch candidate details first
+    // 1. Fetch candidate details
     db.get(`SELECT * FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
         if (err || !candidate) {
-            console.log(`[DEBUG] Notification aborted: Candidate ${candidateEmail} not found in DB.`);
+            console.log(`[DEBUG] Notification aborted: Candidate not found.`);
             return;
         }
 
         const dateStr = new Date().toLocaleString();
-        const emailContent = `
-            🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
-            --------------------------------
-            Name: ${candidate.name}
-            Email: ${candidate.email}
-            Category: ${categoryName}
-            Device: ${candidate.device_info || 'Unknown'}
-            IP: ${candidate.ip_address || 'Hidden'}
-            Location: ${candidate.city || 'Unknown'}, ${candidate.country || 'Unknown'}
-            Time: ${dateStr}
-            --------------------------------
-        `;
+        
+        // Unified detailed message for both Email and Telegram
+        const notificationMessage = `
+🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
+--------------------------------
+Name: ${candidate.name}
+Email: ${candidate.email}
+Category: ${categoryName}
+Device: ${candidate.device_info || 'Unknown'}
+IP: ${candidate.ip_address || 'Hidden'}
+Location: ${candidate.city || 'Unknown'}, ${candidate.country || 'Unknown'}
+Time: ${dateStr}
+--------------------------------
+        `.trim();
 
-        const telegramMsg = `🔔 [Attempt ${attemptCount}] New Candidate: ${candidate.name}\n💼 Category: ${categoryName}\n📧 Email: ${candidate.email}`;
+        // 2. Fetch all examiners
+        db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
+            if (err || !examiners) return;
 
-        // Get Active SMTP Settings
-        db.get(`SELECT * FROM mailer_settings`, [], (err, smtp) => {
-            if (!smtp) console.log("[DEBUG] Email Notification Skipped: No active SMTP settings.");
+            const emailList = examiners.map(ex => ex.email).filter(e => e);
 
-            // Broadcast to ALL examiners (Broadcasting requirement)
-            db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
-                if (err || !examiners) return;
-
-                examiners.forEach(ex => {
-                    // 1. Telegram Broadcast
-                    if (ex.telegram_key && ex.chat_id) {
-                        const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(telegramMsg)}`;
-                        https.get(url, (res) => {
-                            if (res.statusCode !== 200) console.log(`[DEBUG] Telegram failed for chat_id ${ex.chat_id}. Status: ${res.statusCode}`);
-                        }).on('error', (e) => console.error("[DEBUG] Telegram Network Error:", e.message));
-                    }
-
-                    // 2. Email Broadcast
-                    if (ex.email && smtp) {
-                        const transporter = nodemailer.createTransport({
-                            host: smtp.host,
-                            port: 587, // Force 587
-                            secure: false, // Must be false for 587
-                            auth: { 
-                                user: smtp.user, 
-                                pass: smtp.pass 
-                            },
-                            tls: {
-                                // Hostinger requires this sometimes to bypass local network restrictions
-                                rejectUnauthorized: false,
-                                minVersion: 'TLSv1.2'
-                            }
-                        });
-
-                        transporter.sendMail({
-                            from: smtp.from_email,
-                            to: ex.email,
-                            subject: `Broadcast Alert: ${candidate.name}`,
-                            text: emailContent
-                        }).catch(e => console.log(`[DEBUG] Email failed for ${ex.email}:`, e.message));
-                    }
-                });
+            // --- 1. TELEGRAM BROADCAST ---
+            examiners.forEach(ex => {
+                if (ex.telegram_key && ex.chat_id) {
+                    // Send the full notificationMessage to Telegram
+                    const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
+                    
+                    https.get(url, (res) => {
+                        if (res.statusCode !== 200) console.log(`[DEBUG] Telegram failed for chat_id ${ex.chat_id}`);
+                    }).on('error', (e) => console.error("[DEBUG] Telegram Error:", e.message));
+                }
             });
+
+            // --- 2. EMAIL BROADCAST (Via Hostinger Bridge) ---
+            if (emailList.length > 0) {
+                const postData = JSON.stringify({
+                    emails: emailList,
+                    subject: `Broadcast Alert: ${candidate.name}`,
+                    body: notificationMessage
+                });
+
+                const options = {
+                    hostname: 'backend.wtffk.icu',
+                    path: '/send_mail.php',
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(postData),
+                        'X-Api-Key': 'Your_Secret_Key_Here' // Ensure this matches your PHP script
+                    }
+                };
+
+                const req = https.request(options, (res) => {
+                    let resBody = '';
+                    res.on('data', (d) => resBody += d);
+                    res.on('end', () => console.log(`[DEBUG] Email Bridge Result: ${resBody}`));
+                });
+
+                req.on('error', (e) => console.error(`[DEBUG] Email Bridge Connection Error: ${e.message}`));
+                req.write(postData);
+                req.end();
+            }
         });
     });
 }
-
 
 
 
