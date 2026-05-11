@@ -162,19 +162,22 @@
     window.addEventListener('load', () => {
         console.log("Dashboard loaded. Syncing state...");
         
-        // 1. Refresh candidate list
-        socket.emit('request_list_refresh'); 
-        
-        // 2. Sync Toggle Status
         const username = localStorage.getItem('examiner_user');
         if (username) {
-            console.log("Requesting status for:", username);
-            socket.emit('get_examiner_status', username);
-        } else {
-            console.warn("No username found in localStorage");
+            // IMPORTANT: Tell the server we are back before asking for status
+            // This ensures examinerSockets[socket.id] is populated on the server
+            socket.emit('toggle_online', { 
+                username: username, 
+                isOnline: true // We assume true here to "re-bind" the socket; 
+                            // the DB will determine if the toggle stays on.
+            });
+
+            setTimeout(() => {
+                socket.emit('get_examiner_status', username);
+            }, 200); // Small delay to let the toggle_online process
         }
         
-        // 3. Initialize idle timer
+        socket.emit('request_list_refresh'); 
         resetIdleTimer();
     });
 

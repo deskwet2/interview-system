@@ -252,19 +252,17 @@ io.on('connection', (socket) => {
     // LOOPHOLE 3: Examiner Status Toggle
    socket.on('toggle_online', (data) => {
         const { username, isOnline } = data;
-        const status = isOnline ? 1 : 0;
         
-        // Always map the current socket to the username
-        // If they go offline, we remove it. If online, we add it.
         if (isOnline) {
             examinerSockets[socket.id] = username;
         } else {
-            delete examinerSockets[socket.id];
+            // If they manually toggle off, remove all their sockets from the map
+            for (const id in examinerSockets) {
+                if (examinerSockets[id] === username) delete examinerSockets[id];
+            }
         }
 
-        db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [status, username], (err) => {
-            console.log(`Examiner ${username} is now ${isOnline ? 'ONLINE' : 'OFFLINE'}`);
-        });
+        db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [isOnline ? 1 : 0, username]);
     });
 
 
@@ -284,20 +282,24 @@ io.on('connection', (socket) => {
         // 2. Examiner Disconnect (Delayed Auto-Offline)
         const exUsername = examinerSockets[socket.id];
         if (exUsername) {
-            delete examinerSockets[socket.id]; // Clean up the old ID immediately
-
-            // Wait 5 seconds before marking offline in DB
-            // This allows a page refresh to "catch up"
+            console.log(`[DEBUG] Examiner ${exUsername} socket disconnected. Cleaning memory map.`);
+            delete examinerSockets[socket.id]; 
+            
+            // OPTIONAL: "Safety Net" 
+            // Only mark offline in DB after a long period of total absence (e.g., 10 mins)
+            // to catch cases where the browser crashed or the computer died.
             setTimeout(() => {
-                // Check if the username is back in examinerSockets (meaning they reconnected)
-                const isBackOnline = Object.values(examinerSockets).includes(exUsername);
-                
-                if (!isBackOnline) {
-                    db.run(`UPDATE examiners SET status = 0 WHERE username = ?`, [exUsername], () => {
-                        console.log(`Examiner ${exUsername} is truly offline.`);
+                const stillConnected = Object.values(examinerSockets).includes(exUsername);
+                if (!stillConnected) {
+                    // Check if they are still 'Online' in DB before force-closing
+                    db.get(`SELECT status FROM examiners WHERE username = ?`, [exUsername], (err, row) => {
+                        if (row && row.status === 1) {
+                            // This only runs if they haven't reconnected in 10 minutes
+                            // db.run(`UPDATE examiners SET status = 0 WHERE username = ?`, [exUsername]);
+                        }
                     });
                 }
-            }, 5000); 
+            }, 10 * 60 * 1000); // 10 Minute Safety
         }
     });
 
@@ -439,13 +441,17 @@ io.on('connection', (socket) => {
 
     socket.on('get_examiner_status', (username) => {
         db.get(`SELECT status FROM examiners WHERE username = ?`, [username], (err, row) => {
-            if (err) {
-                console.error("DB Error:", err);
-                return;
-            }
-            // Use socket.emit to send ONLY to the person who just refreshed
+            if (err) return console.error("DB Error:", err);
+
+            // Check if this username exists anywhere in our active socket map
+            const isActuallyConnected = Object.values(examinerSockets).includes(username);
+            
+            // If the DB says they are online (1) AND we have an active socket, 
+            // or if they just refreshed, we treat them as online.
+            const effectiveStatus = (row && row.status === 1 && isActuallyConnected) ? 1 : 0;
+
             socket.emit('receive_examiner_status', { 
-                status: row ? row.status : 0 
+                status: effectiveStatus 
             });
         });
     });
