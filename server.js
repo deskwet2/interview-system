@@ -249,19 +249,26 @@ io.on('connection', (socket) => {
     });
 
 
-    // LOOPHOLE 3: Examiner Status Toggle
-   socket.on('toggle_online', (data) => {
+    // New: Just links the socket to the user without touching the DB
+    socket.on('bind_examiner_socket', (data) => {
+        if (data.username) {
+            examinerSockets[socket.id] = data.username;
+            console.log(`[DEBUG] Socket ${socket.id} bound to ${data.username} (Status Unchanged)`);
+        }
+    });
+
+    // Update: This only runs when the USER clicks the toggle
+    socket.on('toggle_online', (data) => {
         const { username, isOnline } = data;
         
         if (isOnline) {
             examinerSockets[socket.id] = username;
         } else {
-            // If they manually toggle off, remove all their sockets from the map
-            for (const id in examinerSockets) {
-                if (examinerSockets[id] === username) delete examinerSockets[id];
-            }
+            // Remove this specific socket from the online map
+            delete examinerSockets[socket.id];
         }
 
+        // Update the DB
         db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [isOnline ? 1 : 0, username]);
     });
 
@@ -439,7 +446,7 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('get_examiner_status', (username) => {
+    /*socket.on('get_examiner_status', (username) => {
         db.get(`SELECT status FROM examiners WHERE username = ?`, [username], (err, row) => {
             if (err) return console.error("DB Error:", err);
 
@@ -452,6 +459,14 @@ io.on('connection', (socket) => {
 
             socket.emit('receive_examiner_status', { 
                 status: effectiveStatus 
+            });
+        });
+    });*/
+
+    socket.on('get_examiner_status', (username) => {
+        db.get(`SELECT status FROM examiners WHERE username = ?`, [username], (err, row) => {
+            socket.emit('receive_examiner_status', { 
+                status: row ? row.status : 0 
             });
         });
     });

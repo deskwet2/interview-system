@@ -164,17 +164,8 @@
         
         const username = localStorage.getItem('examiner_user');
         if (username) {
-            // IMPORTANT: Tell the server we are back before asking for status
-            // This ensures examinerSockets[socket.id] is populated on the server
-            socket.emit('toggle_online', { 
-                username: username, 
-                isOnline: true // We assume true here to "re-bind" the socket; 
-                            // the DB will determine if the toggle stays on.
-            });
-
-            setTimeout(() => {
-                socket.emit('get_examiner_status', username);
-            }, 200); // Small delay to let the toggle_online process
+            // 1. Just ask the server for the current DB status
+            socket.emit('get_examiner_status', username);
         }
         
         socket.emit('request_list_refresh'); 
@@ -183,20 +174,20 @@
 
     // Use a dedicated listener for the status sync
     socket.on('receive_examiner_status', (data) => {
-        console.log("Received status from server:", data);
-        const toggle = document.getElementById('live-toggle');
-        const statusText = document.getElementById('presence-status');
-        
-        if (!toggle || !statusText) return;
-
         const isOnline = (data.status === 1 || data.status === true);
         
-        // Force UI update
+        // Update the UI
+        const toggle = document.getElementById('live-toggle');
+        const statusText = document.getElementById('presence-status');
         toggle.checked = isOnline;
         statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
         statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
-        
-        console.log(isOnline ? 'UI Set: Online' : 'UI Set: Offline');
+
+        // 2. IMPORTANT: If we are online, tell the server to map this socket ID 
+        // to our username so the server knows WE are the ones who are online.
+        if (isOnline) {
+            socket.emit('bind_examiner_socket', { username: localStorage.getItem('examiner_user') });
+        }
     });
     
     function unlockAudio() {
