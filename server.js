@@ -424,6 +424,14 @@ io.on('connection', (socket) => {
             io.to(targetSocket).emit('wrong_answer', { message });
         }
     });
+
+    socket.on('get_examiner_status', (username) => {
+        db.get(`SELECT status FROM examiners WHERE username = ?`, [username], (err, row) => {
+            if (row) {
+                socket.emit('receive_examiner_status', { status: row.status });
+            }
+        });
+    });
 });
 
 /**

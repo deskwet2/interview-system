@@ -158,9 +158,32 @@
     // These will eventually be fetched from the DB (Phase 2/3)
     let taskLibrary = []; 
 
-    window.onload = () => {    // Check if audio is already unlocked or show lock
+    window.onload = () => { 
+        // 1. Refresh the candidate list
         socket.emit('request_list_refresh'); 
+        
+        // 2. Request current examiner status from DB to sync the toggle
+        const username = localStorage.getItem('examiner_user');
+        if (username) {
+            socket.emit('get_examiner_status', username);
+        }
+        
+        // 3. Initialize idle timer
+        resetIdleTimer();
     };
+
+    socket.on('receive_examiner_status', (data) => {
+        const toggle = document.getElementById('live-toggle');
+        const statusText = document.getElementById('presence-status');
+        
+        // Update the checkbox state (status 1 = checked)
+        const isOnline = data.status === 1;
+        toggle.checked = isOnline;
+        
+        // Update the text and color
+        statusText.innerText = isOnline ? "Live & Accepting Candidates" : "Offline";
+        statusText.style.color = isOnline ? "#2ecc71" : "#e74c3c";
+    });
     
     function unlockAudio() {
         loginSound.play().then(() => {
