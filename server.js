@@ -108,11 +108,19 @@ async function notifyExaminers(candidateEmail, categoryName, attemptCount = 1) {
 
                     // 2. Email Broadcast
                     if (ex.email && smtp) {
-                        let transporter = nodemailer.createTransport({
+                        const transporter = nodemailer.createTransport({
                             host: smtp.host,
-                            port: smtp.port,
-                            secure: smtp.port === 465,
-                            auth: { user: smtp.user, pass: smtp.pass }
+                            port: 587, // Force 587
+                            secure: false, // Must be false for 587
+                            auth: { 
+                                user: smtp.user, 
+                                pass: smtp.pass 
+                            },
+                            tls: {
+                                // Hostinger requires this sometimes to bypass local network restrictions
+                                rejectUnauthorized: false,
+                                minVersion: 'TLSv1.2'
+                            }
                         });
 
                         transporter.sendMail({
@@ -172,8 +180,19 @@ io.on('connection', (socket) => {
             });
 
             // 3. EXAMINER AVAILABILITY CHECK
-            db.get(`SELECT COUNT(*) as activeCount FROM examiners WHERE status = 1`, [], (err, row) => {
-                const examinersOnline = row && row.activeCount > 0;
+            db.all(`SELECT username FROM examiners WHERE status = 1`, [], (err, onlineRows) => {
+                if (err) {
+                    console.error("DB Error checking availability:", err);
+                    return;
+                }
+
+                const connectedExaminerUsernames = Object.values(examinerSockets);
+
+                const actuallyAvailable = onlineRows.filter(row => 
+                    connectedExaminerUsernames.includes(row.username)
+                );
+
+                const examinersOnline = actuallyAvailable.length > 0;
 
                 if (!examinersOnline) {
                     // NO EXAMINER ONLINE: Incremental Retry Logic
