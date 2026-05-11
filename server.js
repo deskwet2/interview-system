@@ -254,9 +254,12 @@ io.on('connection', (socket) => {
         const { username, isOnline } = data;
         const status = isOnline ? 1 : 0;
         
-        // Save mapping for disconnect event
+        // Always map the current socket to the username
+        // If they go offline, we remove it. If online, we add it.
         if (isOnline) {
             examinerSockets[socket.id] = username;
+        } else {
+            delete examinerSockets[socket.id];
         }
 
         db.run(`UPDATE examiners SET status = ? WHERE username = ?`, [status, username], (err) => {
@@ -278,14 +281,23 @@ io.on('connection', (socket) => {
             }
         }
 
-        // 2. Examiner Disconnect (Auto-Offline)
-        // If this socket belonged to an examiner, take them offline in the DB
+        // 2. Examiner Disconnect (Delayed Auto-Offline)
         const exUsername = examinerSockets[socket.id];
         if (exUsername) {
-            db.run(`UPDATE examiners SET status = 0 WHERE username = ?`, [exUsername], () => {
-                console.log(`Examiner ${exUsername} disconnected and forced OFFLINE.`);
-                delete examinerSockets[socket.id];
-            });
+            delete examinerSockets[socket.id]; // Clean up the old ID immediately
+
+            // Wait 5 seconds before marking offline in DB
+            // This allows a page refresh to "catch up"
+            setTimeout(() => {
+                // Check if the username is back in examinerSockets (meaning they reconnected)
+                const isBackOnline = Object.values(examinerSockets).includes(exUsername);
+                
+                if (!isBackOnline) {
+                    db.run(`UPDATE examiners SET status = 0 WHERE username = ?`, [exUsername], () => {
+                        console.log(`Examiner ${exUsername} is truly offline.`);
+                    });
+                }
+            }, 5000); 
         }
     });
 
