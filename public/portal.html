@@ -452,21 +452,23 @@
 
         if(defaultPage){
             $('#z6x2c9v4b1_992211').hide();
+            document.getElementById('error-div').innerHTML = data.message;
             document.getElementById('indicator').value = "";
             document.getElementById('placeholder').value = "";
             localStorage.removeItem('cand_email');
             localStorage.removeItem('cand_name');
             localStorage.removeItem('cand_cat');
             document.getElementById('indicator').focus();
+            setTimeout(() => wrapper.classList.remove('error-shake'), 400);
         }else{
 
             if(errDiv) {
-                errDiv.innerText = data.message;
+                errDiv.innerHTML = data.message;
                 errDiv.style.display = "block";
             }
             if(submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerText = "Resubmit Information";
+                submitBtn.innerHTML = "Resubmit";
             }
             
             if(wrapper) {
