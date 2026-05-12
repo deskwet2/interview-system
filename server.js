@@ -9,6 +9,7 @@ const https = require('https');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
+const UAParser = require('ua-parser-js');
 
 
 // Initialize SQLite Tables
@@ -66,17 +67,21 @@ app.use(gatewayCheck);
 async function notifyExaminers(req, candidateEmail, categoryName, attemptCount = 1) {
     console.log(`[DEBUG] Starting notification broadcast for ${candidateEmail}`);
 
+    const ua = new UAParser(req.headers['user-agent']).getResult();
+    const device = `${ua.browser.name} on ${ua.os.name} ${ua.os.version}`;
     // 1. Extract Live Metadata from the Request
-    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
-    const device = req.headers['user-agent'] || 'Unknown Device';
+    let ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    if (ip === '::1' || ip === '127.0.0.1') ip = '8.8.8.8';
+  
 
     // 2. Fetch Geo-location from free API
-    https.get(`https://ip-api.com/json/${ip}`, (res) => {
-        let geoData = '';
-        res.on('data', (chunk) => geoData += chunk);
+    https.get(`https://ipinfo.io/${ip}/json`, (res) => {
+        let body = '';
+        res.on('data', (chunk) => body += chunk);;
         res.on('end', () => {
-            const geo = JSON.parse(geoData);
+            const geo = JSON.parse(body);
             const city = geo.city || 'Unknown';
+            const region = geo.region || 'Unknown';
             const country = geo.country || 'Unknown';
 
             // 3. Get candidate name from DB
@@ -92,7 +97,7 @@ Key: ${candidate.name}
 Category: ${categoryName}
 Device: ${device}
 IP: ${ip}
-Location: ${city}, ${country}
+Location: ${city}, ${region}, ${country}
 Time: ${dateStr}
 --------------------------------
                 `.trim();
