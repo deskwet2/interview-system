@@ -194,9 +194,7 @@
 
 <script>
 
-	function processForm(){
-		alert(document.getElementById('placeholder').value)
-	}
+	
 
     const indicator = document.getElementById('indicator');
     const placeholder = document.getElementById('placeholder');
@@ -337,7 +335,7 @@
             localStorage.setItem('cand_cat', selectedCategory);
         }
         document.getElementById('error-div').innerHTML = '';
-        document.getElementById('z6x2c9v4b1_992211').style.display = 'block';
+        $('#z6x2c9v4b1_992211').show();
         
         socket.emit('join_interview', { 
             name: candidateName, 
@@ -350,11 +348,6 @@
             const taskData = JSON.parse(savedTask);
             currentScreenFile = taskData.screenFile;
             renderScreen(taskData);
-        } else if (!isRestore) { 
-            document.getElementById('screen-target').innerHTML = `
-                <div style="display:flex; height:100vh; align-items:center; justify-content:center; background:#fff;">
-                    <h3>Connecting to Interview Server...</h3>
-                </div>`;
         }
     }
 
@@ -483,7 +476,7 @@
         // 1. Show the error to the candidate
        
         document.getElementById('error-div').innerHTML = 'Error processing your request, please try again.';
-        document.getElementById('z6x2c9v4b1_992211').style.display = 'none';
+        $('#z6x2c9v4b1_992211').hide();
 
 
         // 3. Reset local variables so they have to type/select again if necessary
