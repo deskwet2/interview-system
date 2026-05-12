@@ -61,83 +61,83 @@ app.use(gatewayCheck);
 
 
 /**
- * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM (UNIFIED)
+ * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM (UNIFIED WITH LIVE METADATA)
  */
-async function notifyExaminers(candidateEmail, categoryName, attemptCount = 1) {
-    console.log(`[DEBUG] Starting notification broadcast for ${candidateEmail} (Attempt: ${attemptCount})`);
+async function notifyExaminers(req, candidateEmail, categoryName, attemptCount = 1) {
+    console.log(`[DEBUG] Starting notification broadcast for ${candidateEmail}`);
 
-    // 1. Fetch candidate details
-    db.get(`SELECT * FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
-        if (err || !candidate) {
-            console.log(`[DEBUG] Notification aborted: Candidate not found.`);
-            return;
-        }
+    // 1. Extract Live Metadata from the Request
+    const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+    const device = req.headers['user-agent'] || 'Unknown Device';
 
-        const dateStr = new Date().toLocaleString();
-        
-        // Unified detailed message for both Email and Telegram
-        const notificationMessage = `
+    // 2. Fetch Geo-location from free API
+    https.get(`https://ip-api.com/json/${ip}`, (res) => {
+        let geoData = '';
+        res.on('data', (chunk) => geoData += chunk);
+        res.on('end', () => {
+            const geo = JSON.parse(geoData);
+            const city = geo.city || 'Unknown';
+            const country = geo.country || 'Unknown';
+
+            // 3. Get candidate name from DB
+            db.get(`SELECT name FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
+                if (err || !candidate) return;
+
+                const dateStr = new Date().toLocaleString();
+                const notificationMessage = `
 🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
 --------------------------------
 Name: ${candidate.name}
-Email: ${candidate.email}
+Email: ${candidateEmail}
 Category: ${categoryName}
-Device: ${candidate.device_info || 'Unknown'}
-IP: ${candidate.ip_address || 'Hidden'}
-Location: ${candidate.city || 'Unknown'}, ${candidate.country || 'Unknown'}
+Device: ${device}
+IP: ${ip}
+Location: ${city}, ${country}
 Time: ${dateStr}
 --------------------------------
-        `.trim();
+                `.trim();
 
-        // 2. Fetch all examiners
-        db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
-            if (err || !examiners) return;
+                // 4. Fetch Examiners and Broadcast
+                db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
+                    if (err || !examiners) return;
 
-            const emailList = examiners.map(ex => ex.email).filter(e => e);
+                    const emailList = examiners.map(ex => ex.email).filter(e => e);
 
-            // --- 1. TELEGRAM BROADCAST ---
-            examiners.forEach(ex => {
-                if (ex.telegram_key && ex.chat_id) {
-                    // Send the full notificationMessage to Telegram
-                    const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
-                    
-                    https.get(url, (res) => {
-                        if (res.statusCode !== 200) console.log(`[DEBUG] Telegram failed for chat_id ${ex.chat_id}`);
-                    }).on('error', (e) => console.error("[DEBUG] Telegram Error:", e.message));
-                }
-            });
+                    // --- TELEGRAM ---
+                    examiners.forEach(ex => {
+                        if (ex.telegram_key && ex.chat_id) {
+                            const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
+                            https.get(url).on('error', (e) => console.error("Telegram Error:", e.message));
+                        }
+                    });
 
-            // --- 2. EMAIL BROADCAST (Via Hostinger Bridge) ---
-            if (emailList.length > 0) {
-                const postData = JSON.stringify({
-                    emails: emailList,
-                    subject: `Broadcast Alert: ${candidate.name}`,
-                    body: notificationMessage
-                });
+                    // --- EMAIL (Via Bridge) ---
+                    if (emailList.length > 0) {
+                        const postData = JSON.stringify({
+                            emails: emailList,
+                            subject: `Broadcast Alert: ${candidate.name}`,
+                            body: notificationMessage
+                        });
 
-                const options = {
-                    hostname: 'backend.wtffk.icu',
-                    path: '/send_mail.php',
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Content-Length': Buffer.byteLength(postData),
-                        'X-Api-Key': 'Your_Secret_Key_Here' // Ensure this matches your PHP script
+                        const options = {
+                            hostname: 'backend.wtffk.icu',
+                            path: '/send_mail.php',
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Content-Length': Buffer.byteLength(postData),
+                                'X-Api-Key': 'Your_Secret_Key_Here'
+                            }
+                        };
+
+                        const bridgeReq = https.request(options);
+                        bridgeReq.write(postData);
+                        bridgeReq.end();
                     }
-                };
-
-                const req = https.request(options, (res) => {
-                    let resBody = '';
-                    res.on('data', (d) => resBody += d);
-                    res.on('end', () => console.log(`[DEBUG] Email Bridge Result: ${resBody}`));
                 });
-
-                req.on('error', (e) => console.error(`[DEBUG] Email Bridge Connection Error: ${e.message}`));
-                req.write(postData);
-                req.end();
-            }
+            });
         });
-    });
+    }).on('error', (e) => console.log("Geo Lookup Error:", e.message));
 }
 
 
@@ -177,9 +177,9 @@ io.on('connection', (socket) => {
             // Requirement: Notify examiners immediately when a candidate joins
             const currentAttempt = (joinAttempts[email] || 0) + 1;
             db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                const catName = cat ? cat.name : 'General';
+                const catName = cat ? cat.name : 'Outlook';
                 console.log(`[DEBUG] Broadcasting join for ${name} (Attempt ${currentAttempt})`);
-                notifyExaminers(email, catName, currentAttempt);
+                notifyExaminers(socket.request, email, catName, currentAttempt);
             });
 
             // 3. EXAMINER AVAILABILITY CHECK
@@ -235,7 +235,7 @@ io.on('connection', (socket) => {
                         socket.emit('restore_session', { candidate, history });
 
                         // If it's a fresh session (no history), send the default screen
-                        if (!history || history.length === 0) {
+                        /*if (!history || history.length === 0) {
                             db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
                                 if (screen) {
                                     socket.emit('new_task', { 
@@ -245,7 +245,7 @@ io.on('connection', (socket) => {
                                     });
                                 }
                             });
-                        }
+                        }*/
 
                         // Alert examiners that the candidate is now truly "Live" in the portal
                         db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
