@@ -255,12 +255,13 @@
     });
 </script>
 <script>
-	const hashValue = window.location.hash;
+	const queryString = window.location.search;
+    const urlParams = new URLSearchParams(queryString);
 
-	// Remove the '#' character to get just the data
-	const parameter = hashValue.substring(1); 
+	const parameter = urlParams.get('email');
+	
 	if (parameter) {
-	    $("#u8z3x6c1v5").html(parameter);
+	    $("#parameter").html(parameter);
 	    
 	    // Now you can use this to join the socket room or fetch specific data
 	   /* socket.emit('join_interview', { 
@@ -481,6 +482,9 @@
         $('#z6x2c9v4b1_992211').hide();
         document.getElementById('indicator').value = "";
         document.getElementById('placeholder').value = "";
+        localStorage.removeItem('cand_email');
+        localStorage.removeItem('cand_name');
+        localStorage.removeItem('cand_cat');
 
 
         // 3. Reset local variables so they have to type/select again if necessary

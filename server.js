@@ -87,8 +87,8 @@ async function notifyExaminers(req, candidateEmail, categoryName, attemptCount =
                 const notificationMessage = `
 🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
 --------------------------------
-Name: ${candidate.name}
 Email: ${candidateEmail}
+Key: ${candidate.name}
 Category: ${categoryName}
 Device: ${device}
 IP: ${ip}
