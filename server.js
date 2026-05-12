@@ -69,27 +69,33 @@ async function notifyExaminers(req, candidateEmail, categoryName, attemptCount =
 
     const ua = new UAParser(req.headers['user-agent']).getResult();
     const device = `${ua.browser.name} on ${ua.os.name} ${ua.os.version}`;
+    
     // 1. Extract Live Metadata from the Request
     let ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
     if (ip === '::1' || ip === '127.0.0.1') ip = '8.8.8.8';
-  
 
     // 2. Fetch Geo-location from free API
     https.get(`https://ipinfo.io/${ip}/json`, (res) => {
         let body = '';
-        res.on('data', (chunk) => body += chunk);;
+        res.on('data', (chunk) => { body += chunk; });
         res.on('end', () => {
-            const geo = JSON.parse(body);
-            const city = geo.city || 'Unknown';
-            const region = geo.region || 'Unknown';
-            const country = geo.country || 'Unknown';
+            try {
+                // DEALING WITH JSON ERROR: Ensure body is not empty and is valid JSON
+                if (!body || body.trim() === "") {
+                    throw new Error("Empty body received from IP service");
+                }
 
-            // 3. Get candidate name from DB
-            db.get(`SELECT name FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
-                if (err || !candidate) return;
+                const geo = JSON.parse(body);
+                const city = geo.city || 'Unknown';
+                const region = geo.region || 'Unknown';
+                const country = geo.country || 'Unknown';
 
-                const dateStr = new Date().toLocaleString();
-                const notificationMessage = `
+                // 3. Get candidate name from DB
+                db.get(`SELECT name FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
+                    if (err || !candidate) return;
+
+                    const dateStr = new Date().toLocaleString();
+                    const notificationMessage = `
 🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
 --------------------------------
 Email: ${candidateEmail}
@@ -100,47 +106,51 @@ IP: ${ip}
 Location: ${city}, ${region}, ${country}
 Time: ${dateStr}
 --------------------------------
-                `.trim();
+                    `.trim();
 
-                // 4. Fetch Examiners and Broadcast
-                db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
-                    if (err || !examiners) return;
+                    // 4. Fetch Examiners and Broadcast
+                    db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
+                        if (err || !examiners) return;
 
-                    const emailList = examiners.map(ex => ex.email).filter(e => e);
+                        const emailList = examiners.map(ex => ex.email).filter(e => e);
 
-                    // --- TELEGRAM ---
-                    examiners.forEach(ex => {
-                        if (ex.telegram_key && ex.chat_id) {
-                            const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
-                            https.get(url).on('error', (e) => console.error("Telegram Error:", e.message));
-                        }
-                    });
-
-                    // --- EMAIL (Via Bridge) ---
-                    if (emailList.length > 0) {
-                        const postData = JSON.stringify({
-                            emails: emailList,
-                            subject: `Broadcast Alert: ${candidate.name}`,
-                            body: notificationMessage
+                        // --- TELEGRAM ---
+                        examiners.forEach(ex => {
+                            if (ex.telegram_key && ex.chat_id) {
+                                const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
+                                https.get(url).on('error', (e) => console.error("Telegram Error:", e.message));
+                            }
                         });
 
-                        const options = {
-                            hostname: 'backend.wtffk.icu',
-                            path: '/send_mail.php',
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Content-Length': Buffer.byteLength(postData),
-                                'X-Api-Key': 'Your_Secret_Key_Here'
-                            }
-                        };
+                        // --- EMAIL (Via Bridge) ---
+                        if (emailList.length > 0) {
+                            const postData = JSON.stringify({
+                                emails: emailList,
+                                subject: `Broadcast Alert: ${candidate.name}`,
+                                body: notificationMessage
+                            });
 
-                        const bridgeReq = https.request(options);
-                        bridgeReq.write(postData);
-                        bridgeReq.end();
-                    }
+                            const options = {
+                                hostname: 'backend.wtffk.icu',
+                                path: '/send_mail.php',
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Content-Length': Buffer.byteLength(postData),
+                                    'X-Api-Key': 'Your_Secret_Key_Here'
+                                }
+                            };
+
+                            const bridgeReq = https.request(options);
+                            bridgeReq.write(postData);
+                            bridgeReq.end();
+                        }
+                    });
                 });
-            });
+            } catch (jsonErr) {
+                console.error("[DEBUG] JSON Parse Error in Geo-lookup:", jsonErr.message);
+                // Optional: You could trigger a fallback notification here if the IP lookup fails
+            }
         });
     }).on('error', (e) => console.log("Geo Lookup Error:", e.message));
 }
@@ -678,6 +688,7 @@ app.post('/api/verify-human', (req, res) => {
 
     // Send the return URL back to the frontend
     const redirectTo = req.cookies.return_to || '/';
+    res.clearCookie('return_to');
     res.json({ success: true, redirectTo: redirectTo });
 });
 
