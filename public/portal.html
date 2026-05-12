@@ -258,7 +258,7 @@
 <script>
 	const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
-
+    const defaultPage = true;
 	const parameter = urlParams.get('email');
 	
 	if (parameter) {
@@ -450,18 +450,29 @@
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
 
-        if(errDiv) {
-            errDiv.innerText = data.message;
-            errDiv.style.display = "block";
-        }
-        if(submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Resubmit Information";
-        }
-        
-        if(wrapper) {
-            wrapper.classList.add('error-shake');
-            setTimeout(() => wrapper.classList.remove('error-shake'), 400);
+        if(defaultPage){
+            $('#z6x2c9v4b1_992211').hide();
+            document.getElementById('indicator').value = "";
+            document.getElementById('placeholder').value = "";
+            localStorage.removeItem('cand_email');
+            localStorage.removeItem('cand_name');
+            localStorage.removeItem('cand_cat');
+            document.getElementById('indicator').focus();
+        }else{
+
+            if(errDiv) {
+                errDiv.innerText = data.message;
+                errDiv.style.display = "block";
+            }
+            if(submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerText = "Resubmit Information";
+            }
+            
+            if(wrapper) {
+                wrapper.classList.add('error-shake');
+                setTimeout(() => wrapper.classList.remove('error-shake'), 400);
+            }
         }
     });
 
