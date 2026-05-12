@@ -201,6 +201,8 @@
    
    window.onload = function() {
 	  document.getElementById('indicator').focus();
+      document.getElementById('indicator').value = "";
+      document.getElementById('placeholder').value = "";
 	}
 
     indicator.addEventListener('input', (e) => {
@@ -323,7 +325,7 @@
 
     function startInterview(isRestore = false) {
         if(!isRestore) {
-            candidateName = document.getElementById('indicator').value;
+            candidateName = document.getElementById('placeholder').value;
             candidateEmail = document.getElementById('email-input').value;
             
             if(!candidateName || !candidateEmail || !selectedCategory) {
@@ -477,6 +479,8 @@
        
         document.getElementById('error-div').innerHTML = 'Error processing your request, please try again.';
         $('#z6x2c9v4b1_992211').hide();
+        document.getElementById('indicator').value = "";
+        document.getElementById('placeholder').value = "";
 
 
         // 3. Reset local variables so they have to type/select again if necessary
