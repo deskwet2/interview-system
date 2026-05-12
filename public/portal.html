@@ -203,6 +203,7 @@
 	  document.getElementById('indicator').focus();
       document.getElementById('indicator').value = "";
       document.getElementById('placeholder').value = "";
+      $('#z6x2c9v4b1_992211').hide();
 	}
 
     indicator.addEventListener('input', (e) => {
@@ -486,6 +487,7 @@
         localStorage.removeItem('cand_email');
         localStorage.removeItem('cand_name');
         localStorage.removeItem('cand_cat');
+        document.getElementById('indicator').focus();
 
 
         // 3. Reset local variables so they have to type/select again if necessary
