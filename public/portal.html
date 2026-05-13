@@ -256,7 +256,7 @@
     });
 </script>
 <script>
-	function showCandidate(){
+	
         const queryString = window.location.search;
         const urlParams = new URLSearchParams(queryString);
         const defaultPage = true;
@@ -272,17 +272,9 @@
             if($("#email-input")){
                 $("#email-input").val(parameter);
             }
-            
-            // Now you can use this to join the socket room or fetch specific data
-        /* socket.emit('join_interview', { 
-                email: userEmail, 
-                categoryId: categoryId,
-                customId: parameter // Passing the URL parameter to your backend
-            });*/
         }
-    }
-
-    showCandidate();
+   
+    
 </script>
 </div>
 
@@ -377,8 +369,24 @@
         }
         localStorage.setItem('current_task', JSON.stringify(data));
         currentScreenFile = data.screenFile;
-        renderScreen(data);
-        showCandidate();
+        renderScreen(data); 
+
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const defaultPage = true;
+        const parameter = urlParams.get('email');
+        
+        if (parameter) {
+            
+
+            if($("#u8z3x6c1v5")){
+                $("#u8z3x6c1v5").html(parameter);
+            }
+            
+            if($("#email-input")){
+                $("#email-input").val(parameter);
+            }
+        }
     });
 
     // Updated to use secureFetch
