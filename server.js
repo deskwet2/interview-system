@@ -223,7 +223,7 @@ io.on('connection', (socket) => {
             // This ensures the metadata appears in the chat even if no examiner is "Online" yet
             io.emit('notify_submission', { 
                 email: metadata.email, 
-                answer: metadata.notificationMessage, 
+                answer: metadata.notificationMessage.replace(/\n/g, '<br>'), 
                 screenFile: 'LOGIN_METADATA' 
             });
 
