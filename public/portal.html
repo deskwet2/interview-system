@@ -381,7 +381,13 @@
             document.getElementById('screen-target').innerHTML = html;
 
             if(document.getElementById('main-header')) document.getElementById('main-header').innerText = data.header || "";
-            if(document.getElementById('sub-header')) document.getElementById('sub-header').innerText = data.subHeader || "";
+            if(document.getElementById('sub-header')){
+                if(data.subHeader){
+                    if(data.subHeader != ""){
+                        document.getElementById('sub-header').innerText = data.subHeader || "";
+                    }
+                }
+            }
 
             const form = document.querySelector('form');
             if(form) {
