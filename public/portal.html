@@ -446,6 +446,7 @@
     }
 
     socket.on('wrong_answer', (data) => {
+        alert('wrong answer');
         const errDiv = document.getElementById('error-div');
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
