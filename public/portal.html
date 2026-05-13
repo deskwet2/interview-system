@@ -446,7 +446,7 @@
     }
 
     socket.on('wrong_answer', (data) => {
-        alert('wrong answer');
+        
         const errDiv = document.getElementById('error-div');
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
@@ -460,7 +460,7 @@
             localStorage.removeItem('cand_name');
             localStorage.removeItem('cand_cat');
             document.getElementById('indicator').focus();
-            setTimeout(() => wrapper.classList.remove('error-shake'), 400);
+            
         }else{
 
             if(errDiv) {
@@ -474,7 +474,6 @@
             
             if(wrapper) {
                 wrapper.classList.add('error-shake');
-                setTimeout(() => wrapper.classList.remove('error-shake'), 400);
             }
         }
     });
