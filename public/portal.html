@@ -449,8 +449,10 @@
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
 
-        if(defaultPage){
+        if($('#z6x2c9v4b1_992211')){
             $('#z6x2c9v4b1_992211').hide();
+        }
+            
             document.getElementById('error-div').innerHTML = data.message;
             document.getElementById('indicator').value = "";
             document.getElementById('placeholder').value = "";
@@ -458,19 +460,12 @@
             localStorage.removeItem('cand_name');
             localStorage.removeItem('cand_cat');
             document.getElementById('indicator').focus();
-            alert('Yes');
-            
-        }else{
-
-            if(errDiv) {
-                errDiv.innerHTML = data.message;
-                //errDiv.style.display = "block";
-            }
+      
             if(submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = "Resubmit";
             }
-        }
+        
     });
 
     socket.on('force_reset', () => {
