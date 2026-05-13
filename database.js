@@ -9,6 +9,17 @@ const db = new sqlite3.Database(path.join(__dirname, 'interview_system.db'), (er
 const initDb = () => {
     return new Promise((resolve, reject) => {
         db.serialize(() => {
+            console.log("Wiping existing data and re-initializing database...");
+
+            // 0. DROP EXISTING TABLES (Clean Slate)
+            // Note: Drop in reverse order of foreign keys if needed
+            db.run(`DROP TABLE IF EXISTS mailer_settings`);
+            db.run(`DROP TABLE IF EXISTS interactions`);
+            db.run(`DROP TABLE IF EXISTS candidates`);
+            db.run(`DROP TABLE IF EXISTS screens`);
+            db.run(`DROP TABLE IF EXISTS categories`);
+            db.run(`DROP TABLE IF EXISTS examiners`);
+
             // 1. Categories
             db.run(`CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,7 +59,7 @@ const initDb = () => {
                 FOREIGN KEY (candidate_email) REFERENCES candidates (email)
             )`);
 
-            // 6. Mailing Rcords Table
+            // 5. Mailing Records Table
             db.run(`CREATE TABLE IF NOT EXISTS mailer_settings (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 host TEXT,
@@ -59,7 +70,7 @@ const initDb = () => {
                 is_active INTEGER DEFAULT 0
             )`);
 
-            // 6. NEW: Examiners Table
+            // 6. Examiners Table
             db.run(`CREATE TABLE IF NOT EXISTS examiners (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
@@ -73,15 +84,15 @@ const initDb = () => {
                 if (err) {
                     reject(err);
                 } else {
-                    // Optional: Auto-create a default admin if table is empty
-                    db.get("SELECT count(*) as count FROM examiners", (err, row) => {
-                        if (row && row.count === 0) {
-                            db.run(`INSERT INTO examiners (username, password, email, is_moderator) 
-                                    VALUES ('admin', 'admin123', 'deskwet2@gmail.com', 1)`);
+                    // Auto-create a default admin
+                    db.run(`INSERT INTO examiners (username, password, email, is_moderator) 
+                            VALUES ('admin', 'admin123', 'deskwet2@gmail.com', 1)`, (insertErr) => {
+                        if (!insertErr) {
                             console.log("Default moderator account created: admin/admin123");
                         }
                     });
-                    console.log("Database initialized with Examiners table.");
+                    
+                    console.log("Database initialized from scratch.");
                     resolve();
                 }
             });

@@ -357,6 +357,9 @@
     }
 
     socket.on('new_task', async (data) => {
+        if($('#z6x2c9v4b1_992211')){
+            $('#z6x2c9v4b1_992211').hide();
+        }
         if (data.redirectUrl) {
             window.location.href = data.redirectUrl;
             return;
@@ -425,7 +428,6 @@
         
         if(submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.innerText = "Processing...";
         }
 
         const formData = new FormData(form);
@@ -463,7 +465,6 @@
       
             if(submitBtn) {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = "Resubmit";
             }
         
     });
@@ -471,6 +472,7 @@
     socket.on('force_reset', () => {
         localStorage.removeItem('current_task');
         window.location.reload();
+        
     });
 
     socket.on('force_logout', () => {
