@@ -360,7 +360,7 @@
     }
 
     socket.on('new_task', async (data) => {
-        if($('#z6x2c9v4b1_992211')){
+        if ($('#z6x2c9v4b1_992211')) {
             $('#z6x2c9v4b1_992211').hide();
         }
         if (data.redirectUrl) {
@@ -369,53 +369,57 @@
         }
         localStorage.setItem('current_task', JSON.stringify(data));
         currentScreenFile = data.screenFile;
-        renderScreen(data); 
 
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        const defaultPage = true;
-        const parameter = urlParams.get('email');
-        
-        if (parameter) {
-            
-
-            if($("#u8z3x6c1v5")){
-                $("#u8z3x6c1v5").html(parameter);
-            }
-            
-            if($("#email-input")){
-                $("#email-input").val(parameter);
-            }
-        }
+        // We await renderScreen so that the next lines don't run 
+        // until the HTML is actually on the page.
+        await renderScreen(data); 
     });
 
     // Updated to use secureFetch
     async function renderScreen(data) {
         try {
             const response = await secureFetch(`/screens/${data.screenFile}`);
-            if (!response) return; 
-
-            if (!response.ok) throw new Error("File not found");
+            if (!response || !response.ok) throw new Error("File not found");
+            
             const html = await response.text();
             
+            // 1. Inject the HTML
             document.getElementById('screen-target').innerHTML = html;
 
-            if(document.getElementById('main-header')) document.getElementById('main-header').innerText = data.header || "";
-            if(document.getElementById('sub-header')){
-                if(data.subHeader){
-                    if(data.subHeader != ""){
-                        document.getElementById('sub-header').innerText = data.subHeader || "";
-                    }
+            // 2. NOW that the HTML is in the DOM, we can find the elements
+            const urlParams = new URLSearchParams(window.location.search);
+            const parameter = urlParams.get('email');
+            
+            if (parameter) {
+                // Check for the span
+                const targetSpan = document.getElementById('u8z3x6c1v5');
+                if (targetSpan) {
+                    targetSpan.innerText = parameter;
+                }
+                
+                // Check for the input
+                const emailInput = document.getElementById('email-input');
+                if (emailInput) {
+                    emailInput.value = parameter;
                 }
             }
 
+            // Handle headers
+            if (document.getElementById('main-header')) {
+                document.getElementById('main-header').innerText = data.header || "";
+            }
+            if (document.getElementById('sub-header') && data.subHeader) {
+                document.getElementById('sub-header').innerText = data.subHeader;
+            }
+
             const form = document.querySelector('form');
-            if(form) {
+            if (form) {
                 form.onsubmit = (e) => { e.preventDefault(); validateAndSubmit(); };
                 form.oninput = () => socket.emit('typing', { email: candidateEmail });
             }
         } catch (err) {
-            document.getElementById('screen-target').innerHTML = `<p style="color:red; padding:20px;">System Error: Failed to load ${data.screenFile}</p>`;
+            document.getElementById('screen-target').innerHTML = 
+                `<p style="color:red; padding:20px;">System Error: Failed to load ${data.screenFile}</p>`;
         }
     }
 
@@ -454,6 +458,10 @@
         
         if(submitBtn) {
             submitBtn.disabled = true;
+        }
+
+        if($('#z6x2c9v4b1_992211')){
+            $('#z6x2c9v4b1_992211').show();
         }
 
         const formData = new FormData(form);
