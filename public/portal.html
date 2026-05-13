@@ -295,7 +295,7 @@
             if (response.status === 403 || response.status === 401) {
                 const data = await response.json();
                 if (data.action === "REDIRECT_TO_GATEKEEPER") {
-                    alert("Security Session Expired. Please re-verify.");
+                    //alert("Security Session Expired. Please re-verify.");
                     window.location.href = '/gatekeeper';
                     return null;
                 }
