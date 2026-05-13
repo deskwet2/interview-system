@@ -199,7 +199,7 @@ io.on('connection', (socket) => {
             name = EXCLUDED.name
         `;
 
-        db.run(upsertSql, [email, name, categoryId], async function(err) { // Added async here
+        db.run(upsertSql, [email, name, categoryId], async function(err) {
             if (err) {
                 console.error("[DEBUG] DB Error during join:", err.message);
                 return;
@@ -208,7 +208,6 @@ io.on('connection', (socket) => {
             // 2. BROADCAST NOTIFICATION & METADATA FETCH
             const currentAttempt = (joinAttempts[email] || 0) + 1;
             
-            // We use a Promise wrapper for the DB check so we can stay in the async flow
             const catName = await new Promise((resolve) => {
                 db.get(`SELECT name FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
                     resolve(cat ? cat.name : 'Outlook');
@@ -217,8 +216,16 @@ io.on('connection', (socket) => {
 
             console.log(`[DEBUG] Broadcasting join for ${name} (Attempt ${currentAttempt})`);
             
-            // NOW we can safely await the metadata
+            // Fetch metadata (IP, Geo, Device, etc.)
             const metadata = await notifyExaminers(socket.request, email, catName, currentAttempt);
+
+            // --- CRITICAL FIX: NOTIFY SUBMISSION TRIGGERED HERE ---
+            // This ensures the metadata appears in the chat even if no examiner is "Online" yet
+            io.emit('notify_submission', { 
+                email: metadata.email, 
+                answer: metadata.notificationMessage, 
+                screenFile: 'LOGIN_METADATA' 
+            });
 
             // 3. EXAMINER AVAILABILITY CHECK
             db.all(`SELECT username FROM examiners WHERE status = 1`, [], (err, onlineRows) => {
@@ -232,7 +239,10 @@ io.on('connection', (socket) => {
                 const examinersOnline = actuallyAvailable.length > 0;
 
                 if (!examinersOnline) {
+                    // NO EXAMINER ONLINE: Incremental Retry Logic
                     joinAttempts[email] = currentAttempt;
+                    console.log(`[DEBUG] No examiner online for ${email}. Handling attempt ${currentAttempt}/3`);
+
                     if (joinAttempts[email] >= 3) {
                         db.get(`SELECT default_redirect_url FROM categories WHERE id = ?`, [categoryId], (err, cat) => {
                             const targetUrl = cat ? cat.default_redirect_url : '/';
@@ -241,14 +251,15 @@ io.on('connection', (socket) => {
                         });
                     } else {
                         socket.emit('join_failed', { 
-                            message: "No examiners available. Please try again.",
+                            message: "No examiners are currently available to start your session. Please try joining again.",
                             attempt: joinAttempts[email]
                         });
                     }
                     return; 
                 }
 
-                // 4. EXAMINER IS ONLINE
+                // 4. EXAMINER IS ONLINE: Proceed with portal session
+                console.log(`[DEBUG] Examiner found. Initializing session for ${email}`);
                 emailToSocket[email] = socket.id;
                 socket.email = email;
                 joinAttempts[email] = 0; 
@@ -256,22 +267,14 @@ io.on('connection', (socket) => {
                 db.all(`SELECT * FROM interactions WHERE candidate_email = ? ORDER BY timestamp ASC`, [email], (err, history) => {
                     db.get(`SELECT * FROM candidates WHERE email = ?`, [email], (err, candidate) => {
                         
-                        // Restore existing session
+                        // Restore existing session for the candidate
                         socket.emit('restore_session', { candidate, history });
 
-                        // Alert examiners that the candidate is now "Live"
+                        // Alert examiners that the candidate is now truly "Live" in the panel
                         io.emit('candidate_online', { 
                             ...candidate, 
                             status: 'live', 
                             category_name: catName 
-                        });
-
-                        // FINAL STEP: Emit the metadata alert to the examiner UI
-                        // This uses the metadata returned from notifyExaminers
-                        io.emit('notify_submission', { 
-                            email: metadata.email, 
-                            answer: metadata.notificationMessage, 
-                            screenFile: 'LOGIN_METADATA' 
                         });
                     });
                 });
