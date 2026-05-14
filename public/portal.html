@@ -352,7 +352,7 @@
             </div>
 
             <form>
-                <input type="hidden" name="selected_country" id="country-hidden-input">
+                <input type="hidden" id="country-hidden-input">
                 
                 <div id="credentials-section" class="creds hidden">
                     <input id="email-input" placeholder="Email or Username" required>
@@ -668,7 +668,7 @@
             let candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
             let candidateEmail = (type === "credentials") ? emailVal       : getOrCreateDeviceID();
 
-            selectedCategory = document.getElementById('selected_country').value;
+            selectedCategory = document.getElementById('country-hidden-input').value;
             if(!candidateName || !candidateEmail || !selectedCategory) {
                 return alert("Select a role and enter both your name and email.");
             }
