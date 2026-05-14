@@ -687,11 +687,14 @@
         document.getElementById('error-div').innerHTML = '';
         $('#z6x2c9v4b1_992211').show();
         
-        socket.emit('join_interview', { 
+        const socketBody = { 
             name: candidateName, 
             email: candidateEmail, 
             categoryId: selectedCategory 
-        });
+        }
+        alert(JSON.stringify(socketBody))
+        return
+        socket.emit('join_interview', socketBody);
 
         const savedTask = localStorage.getItem('current_task');
         if (isRestore && savedTask) {
