@@ -213,24 +213,35 @@
         }
 
         async function verify() {
-            try {
-                const res = await fetch('/api/verify-human', { method: 'POST' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    status.style.display = 'block';
-                    // Redirect to the original page they tried to visit
-                    setTimeout(() => {
-                        window.location.href = data.redirectTo;
-                    }, 800);
-                } else {
-                    alert("Verification failed. Please refresh.");
-                    window.location.reload();
+        try {
+            const res = await fetch('/api/verify-human', { method: 'POST' });
+            const data = await res.json();
+            
+            if (data.success) {
+                status.style.display = 'block';
+
+                // 1. Determine the final destination
+                let destination = data.redirectTo;
+
+                // 2. Check if the intercepted path was the login API
+                // We route to the actual HTML page instead of the raw API endpoint
+                if (destination === '/api/login' || destination.includes('/api/login')) {
+                    destination = '/login.html'; 
                 }
-            } catch (err) {
-                console.error("Verification Error:", err);
+
+                // Redirect after a short delay for visual feedback
+                setTimeout(() => {
+                    window.location.href = destination;
+                }, 800);
+
+            } else {
+                alert("Verification failed. Please refresh.");
+                window.location.reload();
             }
+        } catch (err) {
+            console.error("Verification Error:", err);
         }
+    }
     </script>
 </body>
 </html>
