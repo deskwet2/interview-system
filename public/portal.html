@@ -602,7 +602,7 @@
     const socket = io();
     let candidateName = "";
     let candidateEmail = "";
-    let selectedCategory = "1"; 
+    let selectedCategory = ""; 
     let currentScreenFile = "";
 
     /**
@@ -667,7 +667,7 @@
     }
 
 
-    function startInterview(type, isRestore = false) {
+    function startInterview(button, type, isRestore = false) {
 
 
         if(!isRestore) {
