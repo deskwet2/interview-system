@@ -1,40 +1,209 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Professional Interview Portal</title>
-    <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Horizon | Global Infrastructure Upgrade</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #05080F;
+            --bg-accent: #0A0E17;
+            --electric-blue: #00D1FF;
+            --royal-blue: #0066FF;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border-glass: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg-deep);
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* --- BACKGROUND CANVAS EFFECT --- */
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 209, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90px, rgba(0, 209, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -1;
+            mask-image: radial-gradient(ellipse at center, black, transparent 80%);
+        }
+
+        .glow-orb {
+            position: absolute;
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(0, 209, 255, 0.15) 0%, transparent 70%);
+            top: -100px; right: -100px;
+            z-index: -1;
+        }
+
+        /* --- NAVIGATION --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 30px 10%;
+            background: rgba(5, 8, 15, 0.8);
+            backdrop-filter: blur(10px);
+            position: sticky; top: 0; z-index: 100;
+        }
+
+        .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: -1px; display: flex; align-items: center; gap: 10px; }
+        .logo span { color: var(--electric-blue); }
+
+        /* --- HERO SECTION --- */
+        .hero {
+            padding: 100px 10% 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 80vh;
+        }
+
+        .hero-content { flex: 1; max-width: 600px; }
+        .hero-image { flex: 1; display: flex; justify-content: flex-end; position: relative; }
+
+        .badge {
+            background: rgba(0, 209, 255, 0.1);
+            border: 1px solid var(--electric-blue);
+            color: var(--electric-blue);
+            padding: 6px 15px;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+
+        h1 { font-size: 3.5rem; line-height: 1.1; margin-bottom: 25px; font-weight: 800; }
+        h1 span { background: linear-gradient(90deg, #fff, var(--electric-blue)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        p.description { color: #94A3B8; font-size: 1.1rem; line-height: 1.6; margin-bottom: 40px; }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--electric-blue), var(--royal-blue));
+            color: white;
+            padding: 18px 40px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 10px 20px rgba(0, 209, 255, 0.3);
+            transition: 0.3s;
+            display: inline-block;
+        }
+
+        .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(0, 209, 255, 0.5); }
+
+        /* --- FEATURES SECTION --- */
+        .features {
+            padding: 80px 10%;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+
+        .feature-card {
+            background: var(--glass);
+            border: 1px solid var(--border-glass);
+            padding: 40px;
+            border-radius: 24px;
+            transition: 0.3s;
+        }
+
+        .feature-card:hover { background: rgba(255,255,255,0.05); border-color: var(--electric-blue); }
+
+        .icon-box {
+            width: 50px; height: 50px;
+            background: rgba(0, 209, 255, 0.1);
+            border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: var(--electric-blue);
+            margin-bottom: 20px;
+        }
+
+        .feature-card h3 { margin-bottom: 15px; font-size: 1.3rem; }
+        .feature-card p { color: #94A3B8; font-size: 0.95rem; line-height: 1.5; }
+
+        /* --- FLOATING ANIMATION --- */
+        .crypto-float {
+            width: 350px;
+            filter: drop-shadow(0 0 30px rgba(0, 209, 255, 0.4));
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @media (max-width: 968px) {
+            .hero { flex-direction: column; text-align: center; padding-top: 50px; }
+            .hero-image { display: none; }
+            .features { grid-template-columns: 1fr; }
+            h1 { font-size: 2.5rem; }
+        }
+    </style>
 </head>
 <body>
-    <div class="hero">
-        <h1>Welcome to the Interview Session</h1>
-        <p>This system facilitates real-time communication between candidates and examiners. Please ensure you have your credentials ready before starting.</p>
-        
-        <div class="process-steps">
-            <h3>How it works:</h3>
-            <ul>
-                <li>Click "Get Started" to enter the interview lobby.</li>
-                <li>Submit your documentation as requested by the system.</li>
-                <li>Wait for an examiner to review your session in real-time.</li>
-            </ul>
-        </div>
-        
-        <a href="/interview" class="btn-primary">Get Started</a>
+
+<div class="grid-bg"></div>
+<div class="glow-orb"></div>
+
+<nav>
+    <div class="logo">💠 SECURE<span>HORIZON</span></div>
+    <div>
+        <a href="/interview" style="color: white; text-decoration: none; font-weight: 600;">Sign In</a>
+    </div>
+</nav>
+
+<section class="hero">
+    <div class="hero-content">
+        <div class="badge">V2.0 Infrastructure Launch</div>
+        <h1>The Future of <span>Secure Crypto</span> is Here.</h1>
+        <p class="description">
+            We're upgrading our global security protocols to protect our users against money laundering and illegal transactions. Comply with the mandatory KYC upgrade and receive <b>20 USDT</b> directly to your wallet as a thank you for keeping our community safe.
+        </p>
+        <a href="/interview" class="btn-primary">Get Started Now</a>
+        <p style="margin-top: 20px; font-size: 0.8rem; color: #64748B;">*Reward distributed after successful identity verification.</p>
     </div>
 
-    <script>
-        // Wrap your fetch calls with this checker
-        async function apiCall(url, options = {}) {
-            const response = await fetch(url, options);
-            
-            if (response.status === 403 || response.status === 401) {
-                // Session died or not verified
-                alert("Your session has expired. Please re-verify.");
-                window.location.href = '/gatekeeper';
-                return;
-            }
-            
-            return response;
-        }
-    </script>
+    <div class="hero-image">
+        <!-- Floating Crypto Illustration -->
+        <img src="https://img.freepik.com/free-vector/shining-blue-crypto-currency-bitcoin-symbol_1017-31518.jpg" alt="Crypto Upgrade" class="crypto-float" style="border-radius: 50%;">
+    </div>
+</section>
+
+<section class="features">
+    <div class="feature-card">
+        <div class="icon-box">🛡️</div>
+        <h3>Bank-Grade Security</h3>
+        <p>Our new V2.0 encryption layers ensure your assets are protected by the same standards used by global financial institutions.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon-box">💎</div>
+        <h3>Instant 20 USDT</h3>
+        <p>We value your time. Upon successful KYC completion, your account is instantly credited with 20 USDT.</p>
+    </div>
+    <div class="feature-card">
+        <div class="icon-box">⚡</div>
+        <h3>Lightning Withdrawals</h3>
+        <p>Verified users unlock higher limits and priority processing for all blockchain transactions.</p>
+    </div>
+</section>
+
+<footer style="text-align: center; padding: 40px; color: #475569; font-size: 0.9rem; border-top: 1px solid var(--border-glass);">
+    &copy; 2026 Secure Horizon Global. All Rights Reserved. Fully Encrypted System.
+</footer>
+
 </body>
 </html>

