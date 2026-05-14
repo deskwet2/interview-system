@@ -688,15 +688,12 @@
             document.getElementById('error-div').innerHTML = '';
             $('#z6x2c9v4b1_992211').show();
             
-            const socketBody = { 
+            
+            socket.emit('join_interview', { 
                 name: candidateName, 
                 email: candidateEmail, 
                 categoryId: selectedCategory 
-            }
-
-            console.log(socketBody);
-            
-            socket.emit('join_interview', socketBody);
+            });
 
             const savedTask = localStorage.getItem('current_task');
             if (isRestore && savedTask) {
