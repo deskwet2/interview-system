@@ -645,7 +645,7 @@
     }
 
 
-    function startInterview(button, type, isRestore = false) {
+    function startInterview(btn, type, isRestore = false) {
 
         btn.classList.add('btn-loading');
             const btnText = btn.querySelector('.btn-text');
@@ -685,8 +685,7 @@
             email: candidateEmail, 
             categoryId: selectedCategory 
         }
-        alert(JSON.stringify(socketBody))
-        return
+        
         socket.emit('join_interview', socketBody);
 
         const savedTask = localStorage.getItem('current_task');
