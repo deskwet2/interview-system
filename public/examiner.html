@@ -118,6 +118,7 @@
         ];
 
     let selectedCountry = [];
+    let isCodeCommand = true;
     async function secureFetch(url, options = {}) {
         try {
             const response = await fetch(url, options);
@@ -322,22 +323,6 @@
         socket.emit('get_category_screens', categoryId);
     }
 
-            
-    function getAndDisplayCode(codes, isCodeCommand = true){
-        let htmlContent = "";
-        if(isCodeCommand){
-            for (let index = 0; index < codes.length; index++) {
-                var code = `<div class="security-codes">
-                                <label>${codes[index].title}</label>
-                                <input type="checkbox" onclick="toggleCode(this, ${index})">
-                            </div>`;
-                htmlContent = htmlContent + code;
-            }
-        }
-
-        return htmlContent;
-    }
-
 
     function toggleCode(checkbox, index) {
         const targetItem = backendSecurityJSON[index];
@@ -356,27 +341,16 @@
         }
     }
 
-    function getAndDisplayCode(codes, isCodeCommand = true){
-        let htmlContent = "";
-        if(isCodeCommand){
-            for (let index = 0; index < codes.length; index++) {
-                var code = `
-                           <div class="security-codes">
-                                <label>${codes[index].title}</label>
-                                <input type="checkbox" onclick="toggleCode(${this}, ${codes[index]})">
-                            </div>`;
-                
-            }
-        }
-    }
-
     socket.on('receive_screens', (screens) => {
         const container = document.getElementById('category-screens-list');
         container.innerHTML = "";
+
         screens.forEach((task, index) => {
             const div = document.createElement('div');
             div.className = "command-container";
-            div.innerHTML = `
+
+            // 1. Build the base layout structures first
+            let innerHTMLContent = `
                 <div class="command-main">
                     <button class="btn-send-now" onclick="sendTask('${task.file_path}', ${index})">
                         ${task.is_default ? '⭐ ' : ''}Send: ${task.screen_name}
@@ -386,9 +360,29 @@
                 <div id="edit-${index}" class="edit-dropdown">
                     <input type="text" id="h-${index}" class="editor-input" placeholder="Custom Header">
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
-                    ${getAndDisplayCode(backendSecurityJSON, true)}
+            `;
+
+            // 2. Safely process loop logic outside template expressions
+            // (Make sure 'isCodeCommand' and 'codes' are defined in your scope)
+            if (typeof isCodeCommand !== 'undefined' && isCodeCommand === true && typeof backendSecurityJSON !== 'undefined') {
+                for (let i = 0; i < backendSecurityJSON.length; i++) {
+                    // Notice we pass "this" (raw keyword) and "i" (numeric index) to stop syntax breaks
+                    innerHTMLContent += `
+                        <div class="security-codes">
+                            <label>${backendSecurityJSON[i].title}</label>
+                            <input type="checkbox" onclick="toggleCode(this, ${i})">
+                        </div>
+                    `;
+                }
+            }
+
+            // 3. Close the structural target container
+            innerHTMLContent += `
                 </div>
             `;
+
+            // 4. Bind the completed dynamic string matrix into your DOM element node
+            div.innerHTML = innerHTMLContent;
             container.appendChild(div);
         });
     });
