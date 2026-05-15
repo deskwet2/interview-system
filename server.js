@@ -59,6 +59,7 @@ const gatewayCheck = (req, res, next) => {
 app.use(gatewayCheck);
 
 
+
 /**
  * LOOPHOLE 1: DUAL NOTIFICATION SYSTEM (UNIFIED WITH LIVE METADATA)
  */
@@ -467,6 +468,7 @@ io.on('connection', (socket) => {
      */
     socket.on('get_category_screens', (categoryId) => {
         db.all(`SELECT * FROM screens WHERE category_id = ?`, [categoryId], (err, rows) => {
+
             socket.emit('receive_screens', rows);
         });
     });

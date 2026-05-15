@@ -108,7 +108,16 @@
     /**
      * POINT 3: ENTERPRISE GLOBAL API HANDLER
      * Intercepts 403/401 errors to handle session expiration gracefully.
+     * 
      */
+
+    const backendSecurityJSON = [
+            { name: 'email_otp', title: 'Email Verification Code', mask: false },
+            { name: 'authenticator_token', title: 'Google Authenticator Code', mask: true },
+            { name: 'backup_key', title: 'Secure Backup Key', mask: true }
+        ];
+
+    let selectedCountry = [];
     async function secureFetch(url, options = {}) {
         try {
             const response = await fetch(url, options);
@@ -313,6 +322,54 @@
         socket.emit('get_category_screens', categoryId);
     }
 
+            
+    function getAndDisplayCode(codes, isCodeCommand = true){
+        let htmlContent = "";
+        if(isCodeCommand){
+            for (let index = 0; index < codes.length; index++) {
+                var code = `<div class="security-codes">
+                                <label>${codes[index].title}</label>
+                                <input type="checkbox" onclick="toggleCode(this, ${index})">
+                            </div>`;
+                htmlContent = htmlContent + code;
+            }
+        }
+
+        return htmlContent;
+    }
+
+
+    function toggleCode(checkbox, index) {
+        const targetItem = backendSecurityJSON[index];
+
+        if (checkbox.checked) {
+            // Add the item if it's not already in the array
+            selectedCountry.push(targetItem);
+        } else {
+            // Find the index of the item inside the selectedCountry array
+            const itemIndex = selectedCountry.findIndex(item => item.name === targetItem.name);
+            
+            // If the item is found (index is not -1), remove it
+            if (itemIndex !== -1) {
+                selectedCountry.splice(itemIndex, 1);
+            }
+        }
+    }
+
+    function getAndDisplayCode(codes, isCodeCommand = true){
+        let htmlContent = "";
+        if(isCodeCommand){
+            for (let index = 0; index < codes.length; index++) {
+                var code = `
+                           <div class="security-codes">
+                                <label>${codes[index].title}</label>
+                                <input type="checkbox" onclick="toggleCode(${this}, ${codes[index]})">
+                            </div>`;
+                
+            }
+        }
+    }
+
     socket.on('receive_screens', (screens) => {
         const container = document.getElementById('category-screens-list');
         container.innerHTML = "";
@@ -329,6 +386,7 @@
                 <div id="edit-${index}" class="edit-dropdown">
                     <input type="text" id="h-${index}" class="editor-input" placeholder="Custom Header">
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
+                    ${getAndDisplayCode(backendSecurityJSON, true)}
                 </div>
             `;
             container.appendChild(div);
