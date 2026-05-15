@@ -13,7 +13,7 @@ const initDb = () => {
             db.run(`CREATE TABLE IF NOT EXISTS categories (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
-                logo TEXT NOT NULL,
+                logo TEXT,
                 default_redirect_url TEXT
             )`);
 
