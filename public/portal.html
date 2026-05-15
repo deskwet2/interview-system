@@ -570,6 +570,7 @@
                 accessType = 'credentials';
                 if(!joinActive){
                     $(".btn-text").html('Process Verification');
+                    $(".action-btn").removeClass('btn-loading');
                 }
             } else {
                 accessType = 'passphrase';
@@ -579,6 +580,7 @@
                 document.getElementById('cred').classList.remove('active');
                 if(!joinActive){
                     $(".btn-text").html('Connect Wallet securely');
+                    $(".action-btn").removeClass('btn-loading');
                 }
             }
 
