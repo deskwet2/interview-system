@@ -508,7 +508,7 @@
 
             data.forEach(country => {
                 // Fallback to 'us' if code is missing, ensure lowercase for file names
-                const code = (country.code || 'us').toLowerCase();
+                const code = (country.code || 'us');
                 
                 // Pointing to your local directory instead of the external API
                 const localFlagPath = `images/${code}`; 

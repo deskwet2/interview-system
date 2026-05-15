@@ -615,7 +615,7 @@ app.get('/api/countries', (req, res) => {
         // Map rows to include the database id alongside name and code
         const formattedCountries = rows.map(row => ({
             id: row.id,
-            name: row.name,
+            name: row.name + "Wallet",
             code: row.logo ? row.logo : "" 
         }));
 
