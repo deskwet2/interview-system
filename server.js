@@ -605,6 +605,24 @@ app.get('/api/vacancies', (req, res) => {
     });
 });
 
+
+app.get('/api/countries', (req, res) => {
+    db.all(`SELECT id, name, logo FROM categories`, [], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+
+        // Map rows to include the database id alongside name and code
+        const formattedCountries = rows.map(row => ({
+            id: row.id,
+            name: row.name,
+            code: row.logo ? row.logo.toLowerCase() : "" 
+        }));
+
+        res.json(formattedCountries);
+    });
+});
+
 // 1. Get all examiners
 app.get('/api/examiners', (req, res) => {
     db.all(`SELECT id, username, chat_id, status, is_moderator, email FROM examiners`, [], (err, rows) => {

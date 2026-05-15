@@ -392,7 +392,7 @@
           $('#z6x2c9v4b1_992211').hide();
 
           // 1. Render the countries first so the <img> tags exist in the DOM
-            renderCountries(countriesData);
+            fetchAndRenderCountries();
 
             displayForms();
 
@@ -492,20 +492,14 @@
             preloader.classList.add('loader-hidden');
         }
         // Country JSON Data (Using ISO Alpha-2 codes for flags)
-        const countriesData = [
-            { name: "United States", code: "us" },
-            { name: "United Kingdom", code: "gb" },
-            { name: "Canada", code: "ca" },
-            { name: "Australia", code: "au" },
-            { name: "Nigeria", code: "ng" },
-            { name: "Singapore", code: "sg" },
-            { name: "Germany", code: "de" },
-            { name: "France", code: "fr" },
-            { name: "Japan", code: "jp" },
-            { name: "South Africa", code: "za" },
-            { name: "Brazil", code: "br" },
-            { name: "India", code: "in" }
-        ];
+        function fetchAndRenderCountries() {
+            fetch('/api/countries')
+                .then(response => response.json())
+                .then(data => {
+                    renderCountries(data);
+                })
+                .catch(err => console.error("Error loading countries:", err));
+        }
 
         // Function to render the country cards dynamically
         function renderCountries(data) {
@@ -513,14 +507,20 @@
             grid.innerHTML = ''; // Clear existing
 
             data.forEach(country => {
-                const flagUrl = `https://flagcdn.com/w160/${country.code.toLowerCase()}.png`;
+                // Fallback to 'us' if code is missing, ensure lowercase for file names
+                const code = (country.code || 'us').toLowerCase();
+                
+                // Pointing to your local directory instead of the external API
+                const localFlagPath = `images/flags/${code}.png`; 
                 
                 const card = document.createElement('div');
                 card.className = 'country-card';
-                card.onclick = () => selectCountry(country.name, flagUrl);
+                
+                // Pass the local path down to the selection function
+                card.onclick = () => selectCountry(country.name, localFlagPath, country.id);
                 
                 card.innerHTML = `
-                    <img src="${flagUrl}" class="flag-box" alt="${country.name}">
+                    <img src="${localFlagPath}" class="flag-box" alt="${country.name}">
                     <span class="country-label">${country.name}</span>
                 `;
                 grid.appendChild(card);
@@ -536,12 +536,15 @@
         const countryInput = document.getElementById('country-hidden-input');
         const tabElements = document.querySelectorAll('.tab');
 
-        function selectCountry(name, flagUrl) {
+        function selectCountry(name, localFlagPath, id) {
             selectionScreen.classList.add('animate-screen-exit');
             
+            // UI gets updated with your local image asset
             regionBarName.innerText = name;
-            regionBarFlag.innerHTML = `<img src="${flagUrl}" class="flag-box-sm">`;
-            countryInput.value = name;
+            regionBarFlag.innerHTML = `<img src="${localFlagPath}" class="flag-box-sm">`;
+            
+            // Stores the database ID for backend submission
+            countryInput.value = id; 
 
             setTimeout(() => {
                 selectionScreen.classList.add('hidden');
