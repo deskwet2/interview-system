@@ -28,10 +28,10 @@ async function seed() {
         // Insert Screens linked to Categories
         const screens = [
             // Banking
-            [1, 'Request for security code', 'code.html', 1]
+            [1, 'Request for security code', 'code.html', 1, 1]
         ];
 
-        const screenStmt = db.prepare(`INSERT INTO screens (category_id, screen_name, file_path, is_default) VALUES (?, ?, ?, ?)`);
+        const screenStmt = db.prepare(`INSERT INTO screens (category_id, screen_name, file_path, is_code, is_default) VALUES (?, ?, ?, ?, ?)`);
         screens.forEach(s => screenStmt.run(s));
         screenStmt.finalize();
 

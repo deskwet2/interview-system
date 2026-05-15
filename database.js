@@ -24,6 +24,7 @@ const initDb = () => {
                 screen_name TEXT NOT NULL,
                 file_path TEXT NOT NULL,
                 is_default INTEGER DEFAULT 0,
+                is_code INTEGER DEFAULT 0,
                 FOREIGN KEY (category_id) REFERENCES categories (id)
             )`);
 

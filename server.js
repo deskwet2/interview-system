@@ -467,7 +467,7 @@ io.on('connection', (socket) => {
      * POINT 2: Fetching screens for the Examiner's Command Panel
      */
     socket.on('get_category_screens', (categoryId) => {
-        db.all(`SELECT * FROM screens WHERE category_id = ?`, [categoryId], (err, rows) => {
+        db.all(`SELECT * FROM screens`, (err, rows) => {
 
             socket.emit('receive_screens', rows);
         });

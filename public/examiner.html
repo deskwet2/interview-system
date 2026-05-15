@@ -422,7 +422,7 @@
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
             `;
 
-            if (typeof isCodeCommand !== 'undefined' && isCodeCommand === true && typeof backendSecurityJSON !== 'undefined') {
+            if (typeof task.is_code !== 'undefined' && task.is_code === 1 && typeof backendSecurityJSON !== 'undefined') {
                 // Group title wrapper container
                 innerHTMLContent += `
                     <div class="security-codes-group">
