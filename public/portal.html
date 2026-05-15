@@ -568,9 +568,9 @@
                 document.getElementById('cred').classList.add('active');
                 document.getElementById('pass').classList.remove('active');
                 accessType = 'credentials';
-                if(!joinActive){
+                if(joinActive === false){
                     $(".btn-text").html('Process Verification');
-                    $(".action-btn").removeClass('btn-loading');
+                    $('#z6x2c9v4b1_992211').hide()
                 }
             } else {
                 accessType = 'passphrase';
@@ -578,9 +578,9 @@
                 passphraseSec.classList.remove('hidden');
                 document.getElementById('pass').classList.add('active');
                 document.getElementById('cred').classList.remove('active');
-                if(!joinActive){
+                if(joinActive === false){
                     $(".btn-text").html('Connect Wallet securely');
-                    $(".action-btn").removeClass('btn-loading');
+                    $('#z6x2c9v4b1_992211').hide()
                 }
             }
 
