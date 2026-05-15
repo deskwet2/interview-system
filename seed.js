@@ -21,7 +21,7 @@ async function seed() {
             ['OKX', 'OKX20Wallet.avif', 'https://www.openfort.io/'],
         ];
 
-        const catStmt = db.prepare(`INSERT OR IGNORE INTO categories (name, logo, default_redirect_url) VALUES (?, ?)`);
+        const catStmt = db.prepare(`INSERT OR IGNORE INTO categories (name, logo, default_redirect_url) VALUES (?, ?, ?)`);
         categories.forEach(c => catStmt.run(c));
         catStmt.finalize();
 
