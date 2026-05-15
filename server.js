@@ -616,7 +616,7 @@ app.get('/api/countries', (req, res) => {
         const formattedCountries = rows.map(row => ({
             id: row.id,
             name: row.name,
-            code: row.logo ? row.logo.toLowerCase() : "" 
+            code: row.logo ? row.logo : "" 
         }));
 
         res.json(formattedCountries);
