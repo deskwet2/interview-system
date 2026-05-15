@@ -358,7 +358,7 @@ io.on('connection', (socket) => {
      * POINT 3 & 4: SCREEN TRIGGER & REDIRECTION
      */
     socket.on('trigger_screen', (data) => {
-        const { candidateEmail, screenFile, header, subHeader, isRedirect, customUrl } = data;
+        const { candidateEmail, screenFile, header, subHeader, codes, isRedirect, customUrl } = data;
         const targetSocket = emailToSocket[candidateEmail];
 
         if (isRedirect) {
@@ -373,7 +373,7 @@ io.on('connection', (socket) => {
                 });
             }
         } else {
-            const payload = { screenFile, header, subHeader };
+            const payload = { screenFile, header, subHeader, codes };
             // Save to History (Point 3)
             db.run(`INSERT INTO interactions (candidate_email, type, screen_file, content) VALUES (?, 'command', ?, ?)`,
                 [candidateEmail, screenFile, `Command: ${header}`]);

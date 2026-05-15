@@ -384,6 +384,21 @@
         socket.emit('get_category_screens', categoryId);
     }
 
+    function clearAllSecurityCheckboxes() {
+        // 1. Find all checkboxes inside the .security-codes wrappers
+        const checkboxes = document.querySelectorAll('.security-codes input[type="checkbox"]');
+        
+        // 2. Loop through them and set their checked state to false
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+
+        // 3. Clear your data tracking array so it stays in sync
+        selectedCountry = [];
+
+        console.log("Checkboxes cleared. Current selectedCountry state:", selectedCountry);
+    }
+
 
     function toggleCode(checkbox, index) {
         const targetItem = backendSecurityJSON[index];
@@ -517,7 +532,10 @@
             subHeader: s,
             codes: selectedCountry
         });
-        console.log(selectedCountry)
+
+        if (is_code !== undefined && is_code == 1){
+            clearAllSecurityCheckboxes();
+        }
         addMessage('examiner', `Screen Pushed: <strong>${file}</strong>`);
     }
 
