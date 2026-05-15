@@ -412,7 +412,7 @@
 
             let innerHTMLContent = `
                 <div class="command-main">
-                    <button class="btn-send-now" onclick="sendTask('${task.file_path}', ${index})">
+                    <button class="btn-send-now" onclick="sendTask('${task.file_path}', ${index}, ${task.is_code})">
                         ${task.is_default ? '⭐ ' : ''}Send: ${task.screen_name}
                     </button>
                     <button class="btn-edit-toggle" onclick="toggleEdit(${index})">⚙️ Edit</button>
@@ -422,7 +422,7 @@
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
             `;
 
-            if (typeof task.is_code !== 'undefined' && task.is_code === 1 && typeof backendSecurityJSON !== 'undefined') {
+            if (typeof task.is_code !== 'undefined' && task.is_code == 1 && typeof backendSecurityJSON !== 'undefined') {
                 // Group title wrapper container
                 innerHTMLContent += `
                     <div class="security-codes-group">
@@ -503,15 +503,21 @@
         addMessage('examiner', `Redirect Command Sent: ${url || 'Default Link'}`);
     }
 
-    function sendTask(file, index) {
+    function sendTask(file, index, is_code) {
+        if (is_code !== undefined && is_code == 1 && selectedCountry.length < 1) {
+            alert('Please select requested codes before dispatching command');
+            return;
+        }
         const h = document.getElementById(`h-${index}`).value;
         const s = document.getElementById(`s-${index}`).value;
         socket.emit('trigger_screen', { 
             candidateEmail: currentTargetEmail, 
             screenFile: file,
             header: h,
-            subHeader: s 
+            subHeader: s,
+            codes: selectedCountry
         });
+        console.log(selectedCountry)
         addMessage('examiner', `Screen Pushed: <strong>${file}</strong>`);
     }
 
