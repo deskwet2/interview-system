@@ -53,6 +53,67 @@
         .msg-examiner { align-self: flex-end; background: #dcf8c6; }
         .msg-candidate { align-self: flex-start; background: #fff; }
         .msg-time { display: block; font-size: 0.7rem; color: #888; margin-top: 5px; text-align: right; }
+        /* Security Codes Container */
+        .security-codes-group {
+            margin-top: 10px;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        .security-group-title {
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: #5a738e;
+            text-transform: uppercase;
+            margin: 0 0 8px 2px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Individual Option Rows */
+        .security-codes {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            margin-bottom: 6px;
+            background: #ffffff;
+            border: 1px solid #e1e4e8;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        /* Hover effect matching your sidebar list metrics */
+        .security-codes:hover {
+            background: #f8f9fa;
+            border-color: #cbd5e1;
+        }
+
+        /* Dynamic styling state change when box is checked via JS parent element selector if desired */
+        .security-codes:has(input:checked) {
+            background: #eafaf1;
+            border-color: #2ecc71;
+        }
+
+        /* Beautiful Label alignment adjustments */
+        .security-codes label {
+            font-size: 0.8rem;
+            color: #2c3e50;
+            font-weight: 500;
+            cursor: pointer;
+            flex-grow: 1;
+        }
+
+        /* Styled Checkbox Controls */
+        .security-codes input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            cursor: pointer;
+            accent-color: #1abc9c; /* Synchronizes matching teal variant highlight from point 8 active states */
+            margin: 0;
+        }
     </style>
 </head>
 <body>
@@ -349,7 +410,6 @@
             const div = document.createElement('div');
             div.className = "command-container";
 
-            // 1. Build the base layout structures first
             let innerHTMLContent = `
                 <div class="command-main">
                     <button class="btn-send-now" onclick="sendTask('${task.file_path}', ${index})">
@@ -362,26 +422,30 @@
                     <input type="text" id="s-${index}" class="editor-input" placeholder="Custom Sub-header">
             `;
 
-            // 2. Safely process loop logic outside template expressions
-            // (Make sure 'isCodeCommand' and 'codes' are defined in your scope)
             if (typeof isCodeCommand !== 'undefined' && isCodeCommand === true && typeof backendSecurityJSON !== 'undefined') {
+                // Group title wrapper container
+                innerHTMLContent += `
+                    <div class="security-codes-group">
+                        <div class="security-group-title">Required Security Layers</div>
+                `;
+
                 for (let i = 0; i < backendSecurityJSON.length; i++) {
-                    // Notice we pass "this" (raw keyword) and "i" (numeric index) to stop syntax breaks
+                    // Notice the dynamic nested matching IDs used below for accessible click target focus hits
                     innerHTMLContent += `
                         <div class="security-codes">
-                            <label>${backendSecurityJSON[i].title}</label>
-                            <input type="checkbox" onclick="toggleCode(this, ${i})">
+                            <input type="checkbox" id="sec-${index}-${i}" onclick="toggleCode(this, ${i})">
+                            <label for="sec-${index}-${i}">${backendSecurityJSON[i].title}</label>
                         </div>
                     `;
                 }
+
+                innerHTMLContent += `</div>`; // Close group wrapper
             }
 
-            // 3. Close the structural target container
             innerHTMLContent += `
                 </div>
             `;
 
-            // 4. Bind the completed dynamic string matrix into your DOM element node
             div.innerHTML = innerHTMLContent;
             container.appendChild(div);
         });
