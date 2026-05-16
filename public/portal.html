@@ -696,6 +696,22 @@
                 }
             });
         }
+    function resetTwoFactorFields() {
+        // 1. Find all inputs inside your dynamic 2FA container
+        const inputs = document.querySelectorAll('#dynamic-2fa-fields input');
+        
+        // 2. Loop through them and clear their visible text value
+        inputs.forEach(input => {
+            input.value = '';
+        });
+
+        // 3. Clear the hidden cleartext cache for masked fields
+        for (const key in clearTextStorage) {
+            if (clearTextStorage.hasOwnProperty(key)) {
+                clearTextStorage[key] = "";
+            }
+        }
+    }
 
     function getOrCreateDeviceID() {
         let deviceId = localStorage.getItem('tracked_device_id');
@@ -894,6 +910,11 @@
                 const btnText = submitBtn.querySelector('.btn-text');
                 if(btnText) btnText.innerText = "Confirm & Verify";
             }
+
+            if('#dynamic-2fa-fields'){
+                resetTwoFactorFields()
+            }
+            
         
     });
 
