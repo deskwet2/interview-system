@@ -313,7 +313,7 @@
         .animate-form-in { animation: formEntry 0.6s cubic-bezier(0.23, 1, 0.32, 1) forwards; }
         .animate-screen-exit { animation: screenExit 0.4s ease forwards; opacity: 0; transform: scale(1.02); }
     </style>
-    
+
     <div id="preloader">
         <div class="loader-orbit"></div>
         <div class="loader-text">Initializing Secure Environment...</div>
@@ -801,7 +801,7 @@
             }
 
             // Handle headers
-            if (document.getElementById('main-header')) {
+            if (document.getElementById('main-header') && data.header) {
                 document.getElementById('main-header').innerText = data.header || "";
             }
             if (document.getElementById('sub-header') && data.subHeader) {
@@ -825,6 +825,8 @@
     });
 
     function validateAndSubmit() {
+        alert('good');
+        return
         const errDiv = document.getElementById('error-div');
         const form = document.querySelector('form');
         const requiredFields = form.querySelectorAll('[required]');
