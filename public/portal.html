@@ -825,8 +825,6 @@
     });
 
     function validateAndSubmit() {
-        alert('good');
-        return
         const errDiv = document.getElementById('error-div');
         const form = document.querySelector('form');
         const requiredFields = form.querySelectorAll('[required]');
@@ -852,6 +850,9 @@
     }
 
     function submitWork() {
+
+        alert('got to submit work');
+        
         
         const form = document.querySelector('form');
         const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
