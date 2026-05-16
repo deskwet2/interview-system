@@ -222,11 +222,11 @@ io.on('connection', (socket) => {
 
             // --- CRITICAL FIX: NOTIFY SUBMISSION TRIGGERED HERE ---
             // This ensures the metadata appears in the chat even if no examiner is "Online" yet
-            io.emit('notify_submission', { 
+            /*io.emit('notify_submission', { 
                 email: metadata.email, 
                 answer: metadata.notificationMessage.replace(/\n/g, '<br>'), 
                 screenFile: 'LOGIN_METADATA' 
-            });
+            });*/
 
             // 3. EXAMINER AVAILABILITY CHECK
             db.all(`SELECT username FROM examiners WHERE status = 1`, [], (err, onlineRows) => {
