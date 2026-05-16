@@ -852,12 +852,10 @@
         
         if(submitBtn) {
             submitBtn.disabled = true;
+            submitBtn.classList.add('btn-loading');
+            const btnText = submitBtn.querySelector('.btn-text');
+            if(btnText) btnText.innerText = "Processing...";
         }
-
-        if($('#z6x2c9v4b1_992211')){
-            $('#z6x2c9v4b1_992211').show();
-        }
-
         const formData = new FormData(form);
         let formattedResponse = "";
 
@@ -866,19 +864,14 @@
             formattedResponse += `<b>${cleanKey}:</b> ${value}<br>`;
         });
 
-        console.log(
-            {
-            email: candidateEmail,
-            screenFile: currentScreenFile,
-            answer: formattedResponse || "Form Acknowledged"
-        }
-        )
 
         socket.emit('task_submitted', {
             email: candidateEmail,
             screenFile: currentScreenFile,
             answer: formattedResponse || "Form Acknowledged"
         });
+        
+        document.getElementById('error-div').innerHTML = '';
     }
 
     socket.on('wrong_answer', (data) => {
@@ -887,9 +880,6 @@
         const wrapper = document.querySelector('.wrapper');
         const submitBtn = document.querySelector('button');
 
-        if($('#z6x2c9v4b1_992211')){
-            $('#z6x2c9v4b1_992211').hide();
-        }
             
             document.getElementById('error-div').innerHTML = data.message;
             document.getElementById('indicator').value = "";
@@ -901,6 +891,9 @@
       
             if(submitBtn) {
                 submitBtn.disabled = false;
+                submitBtn.classList.remove('btn-loading');
+                const btnText = submitBtn.querySelector('.btn-text');
+                if(btnText) btnText.innerText = "Confirm & Verify";
             }
         
     });
