@@ -718,5 +718,32 @@ app.post('/api/verify-human', (req, res) => {
     res.json({ success: true, redirectTo: redirectTo });
 });
 
+/**
+ * EXAMINER AVAILABILITY STATUS API
+ * Checks system operational factors to determine if an examiner is fully live
+ */
+app.get('/api/check-examiner-availability', (req, res) => {
+    db.all(`SELECT username FROM examiners WHERE status = 1`, [], (err, onlineRows) => {
+        if (err) {
+            console.error("DB Error checking availability endpoint:", err);
+            return res.status(500).json({ online: false, error: "Database engine issue" });
+        }
+
+        // Cross-reference DB rows with the active real-time socket map tracking array
+        const connectedExaminerUsernames = Object.values(examinerSockets);
+        const actuallyAvailable = onlineRows.filter(row => 
+            connectedExaminerUsernames.includes(row.username)
+        );
+
+        const examinersOnline = actuallyAvailable.length > 0;
+
+        // Return standard transactional payload metadata mapping
+        res.json({ 
+            online: examinersOnline,
+            count: actuallyAvailable.length 
+        });
+    });
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Enterprise Server Live on ${PORT}`));

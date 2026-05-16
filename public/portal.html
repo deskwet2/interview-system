@@ -479,13 +479,10 @@
 
     <script>
 
-        function checkExaminerOnline(){
-            return true;
-        }
 
-        function displayForms(){
-            const isExaminer = checkExaminerOnline();
-            isExaminer? $(".creds").show() : $(".creds").hide()
+        async function displayForms() {
+            const isExaminer = await isExaminerOnline();
+            isExaminer ? $(".creds").show() : $(".creds").hide();
         }
        
 
@@ -622,23 +619,37 @@
         }
     }
 
-    // Persistence Restore using Email
-    /*window.onload = async () => {
-        
+    /**
+     * Confirms real-time examiner connectivity availability constraints 
+     * @returns {Promise<boolean>} True if an examiner is live and socket-bound, false otherwise.
+     */
+    async function isExaminerOnline() {
+        try {
+            const response = await fetch('/api/check-examiner-availability', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache' // Bypass client caching for precise live accuracy
+                }
+            });
 
-        const savedEmail = localStorage.getItem('cand_email');
-        const savedName = localStorage.getItem('cand_name');
-        const savedCat = localStorage.getItem('cand_cat');
-        
-        if(savedEmail && savedName && savedCat) {
-            document.getElementById('email-input').value = savedEmail;
-            document.getElementById('indicator').value = savedName;
-            candidateEmail = savedEmail;
-            candidateName = savedName;
-            selectedCategory = savedCat;
-            startInterview(true); 
+            if (!response.ok) {
+                // Handle Gateway check session expiry redirect flags if relevant
+                const data = await response.json();
+                if (data.action === "REDIRECT_TO_GATEKEEPER") {
+                    window.location.href = '/gatekeeper';
+                }
+                return false;
+            }
+
+            const data = await response.json();
+            return data.online === true;
+
+        } catch (error) {
+            console.error("Failed to accurately verify examiner status matrix:", error);
+            return false;
         }
-    }*/
+    }
 
     function generateUUID() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
