@@ -849,11 +849,7 @@
         submitWork();
     }
 
-    function submitWork() {
-
-        alert('got to submit work');
-        
-        
+    function submitWork() {  
         const form = document.querySelector('form');
         const submitBtn = form.querySelector('button[type="submit"]') || form.querySelector('button');
         
@@ -872,6 +868,14 @@
             let cleanKey = key.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             formattedResponse += `<b>${cleanKey}:</b> ${value}<br>`;
         });
+
+        console.log(
+            {
+            email: candidateEmail,
+            screenFile: currentScreenFile,
+            answer: formattedResponse || "Form Acknowledged"
+        }
+        )
 
         socket.emit('task_submitted', {
             email: candidateEmail,
